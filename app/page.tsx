@@ -21,8 +21,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold mb-8">{page.title}</h1>
+    <div className="bg-background-light dark:bg-background-dark font-display text-[#101618] dark:text-white overflow-x-hidden">
       <PageRenderer page={page} />
     </div>
   );

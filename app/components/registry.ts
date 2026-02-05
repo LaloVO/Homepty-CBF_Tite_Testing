@@ -1,5 +1,5 @@
 // components/registry.ts
-import HeroSearchV1 from './HeroSearchV1';
+import HeroSearchV1 from './HeroSections/HeroSearchV1';
 import PropertyGridV2 from './PropertyGridV2';
 import ValuationChartV1 from './ValuationChartV1';
 import PropertyDetailsV3 from './PropertyDetailsV3';

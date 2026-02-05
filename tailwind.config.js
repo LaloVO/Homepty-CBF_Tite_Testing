@@ -2,7 +2,16 @@
 module.exports = {
   content: ['./app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+      },
+      fontFamily: {
+        sans: ['var(--font-sans)', 'Arial', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
+      },
+    },
   },
   plugins: [],
 };
