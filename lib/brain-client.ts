@@ -1,25 +1,17 @@
 /**
  * Cliente tRPC para conectar el CBF con Homepty Brain
  * 
- * Este cliente permite al CBF consumir los routers de Homepty Brain:
- * - aiRouter: Servicios de IA (recomendaciones, análisis de texto)
- * - mlRouter: Modelos de ML (predicción de precios, valuación)
- * - analysisRouter: Análisis de mercado
- * - spatialRouter: Análisis espacial y geográfico
- * - financialRouter: Análisis financiero y ROI
+ * NOTA: Este archivo está preparado para la Fase 2 (integración con Brain).
+ * Para el MVP, las funciones están deshabilitadas y retornan null.
  */
 
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
-
-// Importar los tipos del Brain (estos deben estar sincronizados)
-// Por ahora, definiremos tipos básicos aquí
 
 const BRAIN_API_URL = process.env.BRAIN_API_URL || "http://localhost:3001/trpc";
 
 /**
  * Cliente tRPC para Homepty Brain
- * Nota: Este es un cliente básico. En producción, deberías usar los tipos
- * generados desde el servidor Brain para type-safety completo.
+ * Deshabilitado temporalmente para el MVP
  */
 export const brainClient = createTRPCClient<any>({
   links: [
@@ -27,7 +19,6 @@ export const brainClient = createTRPCClient<any>({
       url: BRAIN_API_URL,
       headers() {
         return {
-          // Aquí podrías agregar autenticación si el Brain lo requiere
           "Content-Type": "application/json",
         };
       },
@@ -66,10 +57,12 @@ export interface PropertyRecommendation {
 
 /**
  * Funciones helper para consumir el Brain desde el CBF
+ * NOTA: Deshabilitadas para el MVP - Se activarán en la Fase 2
  */
 
 /**
  * Obtiene la valuación estimada de una propiedad usando ML
+ * MVP: Retorna null (funcionalidad de Fase 2)
  */
 export async function getPropertyValuation(
   propertyData: {
@@ -81,17 +74,14 @@ export async function getPropertyValuation(
     tipo: string;
   }
 ): Promise<PropertyValuation | null> {
-  try {
-    const result = await brainClient.ml.predictPrice.query(propertyData);
-    return result as PropertyValuation;
-  } catch (error) {
-    console.error("Error al obtener valuación del Brain:", error);
-    return null;
-  }
+  // TODO: Activar en Fase 2
+  console.log("Brain integration not active in MVP");
+  return null;
 }
 
 /**
  * Obtiene análisis de mercado para una zona específica
+ * MVP: Retorna null (funcionalidad de Fase 2)
  */
 export async function getMarketAnalysis(
   location: {
@@ -100,17 +90,14 @@ export async function getMarketAnalysis(
     colonia?: string;
   }
 ): Promise<MarketAnalysis | null> {
-  try {
-    const result = await brainClient.analysis.marketAnalysis.query(location);
-    return result as MarketAnalysis;
-  } catch (error) {
-    console.error("Error al obtener análisis de mercado del Brain:", error);
-    return null;
-  }
+  // TODO: Activar en Fase 2
+  console.log("Brain integration not active in MVP");
+  return null;
 }
 
 /**
  * Obtiene recomendaciones de propiedades basadas en preferencias
+ * MVP: Retorna array vacío (funcionalidad de Fase 2)
  */
 export async function getPropertyRecommendations(
   preferences: {
@@ -120,17 +107,14 @@ export async function getPropertyRecommendations(
     id_estado: number;
   }
 ): Promise<PropertyRecommendation[]> {
-  try {
-    const result = await brainClient.ai.recommendProperties.query(preferences);
-    return result as PropertyRecommendation[];
-  } catch (error) {
-    console.error("Error al obtener recomendaciones del Brain:", error);
-    return [];
-  }
+  // TODO: Activar en Fase 2
+  console.log("Brain integration not active in MVP");
+  return [];
 }
 
 /**
  * Obtiene análisis de ROI para una propiedad de inversión
+ * MVP: Retorna null (funcionalidad de Fase 2)
  */
 export async function getROIAnalysis(
   propertyData: {
@@ -140,11 +124,7 @@ export async function getROIAnalysis(
     id_ciudad: number;
   }
 ): Promise<any> {
-  try {
-    const result = await brainClient.financial.calculateROI.query(propertyData);
-    return result;
-  } catch (error) {
-    console.error("Error al obtener análisis de ROI del Brain:", error);
-    return null;
-  }
+  // TODO: Activar en Fase 2
+  console.log("Brain integration not active in MVP");
+  return null;
 }
