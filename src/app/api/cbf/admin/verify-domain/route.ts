@@ -91,7 +91,6 @@ export async function POST(request: NextRequest) {
         success: true,
         verified: isVerified,
         domain: site.custom_domain,
-        verification: verifyResult.value?.verification || null,
         domainInfo: domainInfo.value || null,
       });
     } catch (vercelError: any) {
