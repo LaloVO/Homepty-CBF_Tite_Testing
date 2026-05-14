@@ -1,16 +1,39 @@
 import { headers } from 'next/headers';
 import { getSiteByDomain } from '../lib/db';
 import { PageRenderer } from './components/PageRenderer';
+import Header from './components/homepty/Header';
+import HeroSection from './components/homepty/HeroSection';
+import DashboardPreviewSection from './components/homepty/DashboardPreviewSection';
+import FeaturesSection from './components/homepty/FeaturesSection';
+import WhiteLabelSection from './components/homepty/WhiteLabelSection';
+import Nom247Section from './components/homepty/Nom247Section';
+import PricingSection from './components/homepty/PricingSection';
+import CTASection from './components/homepty/CTASection';
+import Footer from './components/homepty/Footer';
+
+const HOMEPTY_MAIN_DOMAINS = ['localhost', 'homepty.com', 'www.homepty.com'];
 
 export default async function HomePage() {
   const headersList = await headers();
   const rawHost = headersList.get('host') || '';
+  const domain = rawHost.replace('www.', '').replace(':3000', '');
 
-  let domain = rawHost.replace('www.', '').replace(':3000', '');
-
-  // Para desarrollo local, usar un dominio de prueba
-  if (domain === 'localhost') {
-    domain = 'testingidea.homepty.com';
+  if (HOMEPTY_MAIN_DOMAINS.includes(domain) || domain === '') {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main>
+          <HeroSection />
+          <DashboardPreviewSection />
+          <FeaturesSection />
+          <WhiteLabelSection />
+          <PricingSection />
+          <Nom247Section />
+          <CTASection />
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   const site = await getSiteByDomain(domain);
@@ -43,14 +66,12 @@ export default async function HomePage() {
   }
 
   return (
-    <div 
-      className="bg-background-light dark:bg-background-dark font-display text-[#101618] dark:text-white overflow-x-hidden"
-      style={{
-        fontFamily: site.config.theme.font_family,
-      }}
+    <div
+      className="bg-background font-sans text-foreground overflow-x-hidden"
+      style={{ fontFamily: site.config.theme.font_family }}
     >
-      <PageRenderer 
-        page={page} 
+      <PageRenderer
+        page={page}
         userId={site.userId}
         siteConfig={site.config}
       />
