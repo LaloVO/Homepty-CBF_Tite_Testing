@@ -11,7 +11,7 @@ import PricingSection from './components/homepty/PricingSection';
 import CTASection from './components/homepty/CTASection';
 import Footer from './components/homepty/Footer';
 
-const HOMEPTY_MAIN_DOMAINS = ['localhost', 'homepty.com', 'www.homepty.com'];
+const HOMEPTY_MAIN_DOMAINS = ['localhost', 'homepty.com', 'www.homepty.com', 'sites.homepty.com'];
 
 export default async function HomePage() {
   const headersList = await headers();

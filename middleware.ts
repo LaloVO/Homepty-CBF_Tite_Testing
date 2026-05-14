@@ -36,10 +36,13 @@ async function extractSubdomain(request: NextRequest): Promise<string | null> {
 
   // Production: Check if it's a subdomain of homepty.com
   const rootDomainFormatted = ROOT_DOMAIN.split(':')[0];
+  const PLATFORM_SUBDOMAINS = ['www', 'sites', 'app', 'api'];
+  const subdirectName = hostname.replace(`.${rootDomainFormatted}`, '');
   const isSubdomain =
     hostname !== rootDomainFormatted &&
     hostname !== `www.${rootDomainFormatted}` &&
-    hostname.endsWith(`.${rootDomainFormatted}`);
+    hostname.endsWith(`.${rootDomainFormatted}`) &&
+    !PLATFORM_SUBDOMAINS.includes(subdirectName);
 
   if (isSubdomain) {
     return hostname.replace(`.${rootDomainFormatted}`, '');
