@@ -1,0 +1,158 @@
+{
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\eslint.config.mjs": {
+    "mtime": 1770527384.7621164,
+    "hash": "6c4307ffa009658f5c97f5629094c0c2"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\middleware.ts": {
+    "mtime": 1777153332.3870811,
+    "hash": "afcb243019bd7f1a216c83d569c532ac"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\next.config.ts": {
+    "mtime": 1770527384.7671413,
+    "hash": "025f4fcb6024b3524d19492cf7ce54a2"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\postcss.config.js": {
+    "mtime": 1770527384.770289,
+    "hash": "762a94d1749c8e97eebf3f94102e8eb2"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\tailwind.config.js": {
+    "mtime": 1770527384.7767599,
+    "hash": "b6c5a5b10825f4c9ea4bd9cd05729c2f"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\layout.tsx": {
+    "mtime": 1770527384.7621164,
+    "hash": "3933b6ffdc86fd606df3d7eb948398e6"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\page.tsx": {
+    "mtime": 1772407804.6687694,
+    "hash": "559c14d80581d57c08133766fe7a9af3"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\api\\cbf\\admin\\create-site\\route.ts": {
+    "mtime": 1777153332.3800685,
+    "hash": "1b312a09f457065992f07ef2ca4b4830"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\api\\cbf\\analysis\\market\\route.ts": {
+    "mtime": 1772407804.655687,
+    "hash": "fdb3268713aca95aea0c0f0536c1bec7"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\api\\cbf\\properties\\route.ts": {
+    "mtime": 1772407804.659686,
+    "hash": "8815fa447775189710fbf631575d6b6b"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\api\\cbf\\properties\\[id]\\route.ts": {
+    "mtime": 1772407804.657686,
+    "hash": "827657c6e3404fa9c7ef8feace28da44"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\api\\cbf\\recommendations\\route.ts": {
+    "mtime": 1772407804.6617522,
+    "hash": "9b75286188b0094b903c194e14d23f4d"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\api\\cbf\\user\\route.ts": {
+    "mtime": 1772407804.6617522,
+    "hash": "f6e831bf5a4c7f75424b36b6f8c07ce9"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\api\\cbf\\valuation\\route.ts": {
+    "mtime": 1772407804.6617522,
+    "hash": "25e552e6e0a1558552975451599c6e0e"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\components\\LeadCaptureFormV2.tsx": {
+    "mtime": 1770527384.758849,
+    "hash": "47862b244aedb37ff5329cf95f207d65"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\components\\PageRenderer.tsx": {
+    "mtime": 1772407804.6617522,
+    "hash": "e30475d3027aa6d71d036d591fbc990f"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\components\\PropertyDetailsV3.tsx": {
+    "mtime": 1770527384.7614753,
+    "hash": "f9b0d1916a6258089fde5752dda4c89a"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\components\\PropertyGridV2.tsx": {
+    "mtime": 1772407804.6687694,
+    "hash": "2217fdf93b55f794a4463b382c35b9a2"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\components\\registry.ts": {
+    "mtime": 1770527384.7621164,
+    "hash": "5dc17fc9bd0b17a3cf4816793a303037"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\components\\ValuationChartV1.tsx": {
+    "mtime": 1770527384.7621164,
+    "hash": "6a7f7282307c9d4790fc2605c30fbc94"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\components\\HeroSections\\HeroSearchV1.tsx": {
+    "mtime": 1770527384.7560115,
+    "hash": "a8397939b3b567ed0156fa39c6d380e5"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\app\\[...slug]\\page.tsx": {
+    "mtime": 1770527384.751764,
+    "hash": "ff16717b81f9bd502a720b5a88ed82fc"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\lib\\auth.ts": {
+    "mtime": 1772407804.6687694,
+    "hash": "a2405b9556aada767de5a27894f698fe"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\lib\\brain-client.ts": {
+    "mtime": 1777153332.3820698,
+    "hash": "c44a0cae134422ea2e12289247714c29"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\lib\\db.ts": {
+    "mtime": 1772407804.674787,
+    "hash": "2597790ee9d539deed55ba0c8a3a8ebc"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\lib\\supabase.ts": {
+    "mtime": 1772407804.674787,
+    "hash": "86d29fb1cf3541fcce5dc1766b72ca07"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\lib\\supabase\\server.ts": {
+    "mtime": 1777153332.3840716,
+    "hash": "99e41e7a147deae84d1630b02dc18b39"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\src\\app\\api\\cbf\\admin\\add-custom-domain\\route.ts": {
+    "mtime": 1777153332.3977334,
+    "hash": "404680e7b293431d77af59aa6c11baa1"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\src\\app\\api\\cbf\\admin\\verify-domain\\route.ts": {
+    "mtime": 1777153332.3993437,
+    "hash": "147e7781a1a0291e23c1238a63752092"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\src\\app\\sites\\[subdomain]\\not-found.tsx": {
+    "mtime": 1777153332.400357,
+    "hash": "b886263b64486e18dbbc0e9d478ec340"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\src\\app\\sites\\[subdomain]\\page.tsx": {
+    "mtime": 1777153332.4028907,
+    "hash": "275745bc03dd9b8d62a08ca07c7ef37d"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\BRAIN_INTEGRATION.md": {
+    "mtime": 1775750716.3748963,
+    "hash": "68eedf9341b9676ec416136c26144efa"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\README.md": {
+    "mtime": 1772407804.6476805,
+    "hash": "3b7ed8fe4308c2b63953c595d7d2bc83"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\README.nextjs.md": {
+    "mtime": 1772407804.6486845,
+    "hash": "9162add00befbcdb432430f405c4ad8d"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\public\\file.svg": {
+    "mtime": 1770527384.7735014,
+    "hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\public\\globe.svg": {
+    "mtime": 1770527384.7745218,
+    "hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\public\\next.svg": {
+    "mtime": 1770527384.7755208,
+    "hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\public\\vercel.svg": {
+    "mtime": 1770527384.7755208,
+    "hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "C:\\Users\\eduar\\Downloads\\Nueva carpeta\\Homepty-CBF_Tite_Testing\\public\\window.svg": {
+    "mtime": 1770527384.7767599,
+    "hash": "a2760511c65806022ad20adf74370ff3"
+  }
+}
