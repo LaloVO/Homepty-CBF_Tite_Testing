@@ -9,11 +9,14 @@ function generateCBFApiKey(): string {
 
 async function deployVercelProject(subdomain: string, cbfApiKey: string) {
   const token = process.env.VERCEL_API_TOKEN;
+  const teamId = process.env.VERCEL_TEAM_ID;
   const cbfApiUrl = process.env.CBF_API_BASE_URL;
   if (!token || !cbfApiUrl) return;
 
+  const teamQuery = teamId ? `?teamId=${teamId}` : "";
+
   try {
-    const createRes = await fetch("https://api.vercel.com/v10/projects", {
+    const createRes = await fetch(`https://api.vercel.com/v10/projects${teamQuery}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -36,7 +39,7 @@ async function deployVercelProject(subdomain: string, cbfApiKey: string) {
       return;
     }
 
-    await fetch(`https://api.vercel.com/v10/projects/${project.id}/domains`, {
+    await fetch(`https://api.vercel.com/v10/projects/${project.id}/domains${teamQuery}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
