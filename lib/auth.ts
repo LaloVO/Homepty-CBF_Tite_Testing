@@ -20,7 +20,7 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
       .single();
 
     if (error || !data) {
-      console.error("API Key no encontrada:", error);
+      console.error("API Key no encontrada. URL:", process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 40), "Error code:", error?.code, "Error msg:", error?.message, "Key prefix:", apiKey?.slice(0, 20));
       return null;
     }
 
