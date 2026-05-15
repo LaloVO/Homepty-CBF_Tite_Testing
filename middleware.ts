@@ -79,8 +79,27 @@ async function getSubdomainFromCustomDomain(hostname: string): Promise<string | 
   }
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization,Content-Type',
+};
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Manejar preflight CORS para todas las rutas CBF
+  if (pathname.startsWith('/api/cbf') && request.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+  }
+
+  // Agregar headers CORS a respuestas normales de la API CBF
+  if (pathname.startsWith('/api/cbf')) {
+    const response = NextResponse.next();
+    Object.entries(CORS_HEADERS).forEach(([k, v]) => response.headers.set(k, v));
+    return response;
+  }
+
   const subdomain = await extractSubdomain(request);
 
   // Si es un subdomain o custom domain, servir el sitio satélite
@@ -110,6 +129,6 @@ export const config = {
      * 4. /_vercel (Vercel internals)
      * 5. All root files inside /public (e.g. /favicon.ico)
      */
-    '/((?!api/cbf|_next|_static|_vercel|[\\w-]+\\.\\w+).*)',
+    '/((?!_next|_static|_vercel|[\\w-]+\\.\\w+).*)',
   ],
 };
