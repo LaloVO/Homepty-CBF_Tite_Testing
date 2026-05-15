@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// CBF corre server-side — usa service role para bypassear RLS en user_sites y propiedades
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseKey) {
   throw new Error(
     "Faltan las variables de entorno de Supabase. Verifica tu archivo .env.local"
   );
@@ -13,7 +14,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * Cliente de Supabase para el CBF
  * Este cliente se conecta a la base de datos central de Homepty
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Tipos de base de datos (sincronizados con app.homepty.com)
