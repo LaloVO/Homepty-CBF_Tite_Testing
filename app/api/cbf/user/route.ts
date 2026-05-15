@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const { data: siteData, error: siteError } = await supabase
       .from("user_sites")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id_supabase", userId)
       .single();
 
     if (siteError && siteError.code !== "PGRST116") {

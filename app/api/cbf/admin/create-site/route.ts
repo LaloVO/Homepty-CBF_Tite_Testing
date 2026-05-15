@@ -1,43 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-/**
- * Endpoint ADMIN para crear un sitio satélite para un usuario
- * 
- * Este endpoint es llamado por el equipo de Homepty para activar
- * un sitio satélite para un usuario específico.
- * 
- * POST /api/cbf/admin/create-site
- * 
- * Body:
- * {
- *   "user_id_supabase": "uuid-del-usuario",
- *   "site_name": "Nombre del Sitio",
- *   "subdomain": "subdominio-opcional",
- *   "custom_domain": "dominio-opcional.com"
- * }
- * 
- * Headers:
- * - Authorization: Bearer [ADMIN_API_KEY]
- * 
- * Response:
- * {
- *   "ok": true,
- *   "message": "Sitio creado exitosamente",
- *   "data": {
- *     "site_id": "uuid",
- *     "cbf_api_key": "cbf_live_...",
- *     "site_url": "https://..."
- *   }
- * }
- */
-
-// Generar API Key única para el sitio
-function generateCBFApiKey(userId: string): string {
+function generateCBFApiKey(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 15);
-  const userPart = userId.substring(0, 8);
-  return `cbf_live_${userPart}${timestamp}${random}`;
+  return `cbf_live_${timestamp}${random}`;
+}
+
+async function deployVercelProject(subdomain: string, cbfApiKey: string) {
+  const token = process.env.VERCEL_API_TOKEN;
+  const cbfApiUrl = process.env.CBF_API_BASE_URL;
+  if (!token || !cbfApiUrl) return;
+
+  try {
+    const createRes = await fetch("https://api.vercel.com/v10/projects", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: `homepty-${subdomain}`,
+        gitRepository: { type: "github", repo: "LaloVO/Agencia-template-CBF" },
+        framework: "vite",
+        environmentVariables: [
+          { key: "VITE_CBF_API_URL", value: cbfApiUrl, target: ["production"] },
+          { key: "VITE_CBF_API_KEY", value: cbfApiKey, target: ["production"] },
+        ],
+      }),
+    });
+
+    const project = await createRes.json();
+    if (!project.id) {
+      console.error("Error creando proyecto Vercel:", project);
+      return;
+    }
+
+    await fetch(`https://api.vercel.com/v10/projects/${project.id}/domains`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: `${subdomain}.homepty.com` }),
+    });
+  } catch (err) {
+    console.error("Error en deploy Vercel:", err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -46,134 +55,109 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get("authorization");
     const adminKey = process.env.CBF_ADMIN_API_KEY;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { ok: false, message: "No autorizado" },
-        { status: 401 }
-      );
+    if (!authHeader || !authHeader.startsWith("Bearer ") || !adminKey) {
+      return NextResponse.json({ ok: false, message: "No autorizado" }, { status: 401 });
     }
 
-    const providedKey = authHeader.substring(7);
-    
-    // Si no hay admin key configurada, rechazar
-    if (!adminKey) {
-      return NextResponse.json(
-        { ok: false, message: "Servicio no configurado" },
-        { status: 500 }
-      );
+    if (authHeader.substring(7) !== adminKey) {
+      return NextResponse.json({ ok: false, message: "API Key inválida" }, { status: 401 });
     }
 
-    if (providedKey !== adminKey) {
-      return NextResponse.json(
-        { ok: false, message: "API Key inválida" },
-        { status: 401 }
-      );
-    }
-
-    // Parsear el body
     const body = await request.json();
     const { user_id_supabase, site_name, subdomain, custom_domain } = body;
 
-    // Validar campos requeridos
     if (!user_id_supabase || !site_name) {
       return NextResponse.json(
-        {
-          ok: false,
-          message: "Faltan campos requeridos: user_id_supabase, site_name",
-        },
+        { ok: false, message: "Faltan campos requeridos: user_id_supabase, site_name" },
         { status: 400 }
       );
     }
-
-    // Usar el cliente de Supabase
 
     // Verificar que el usuario existe
     const { data: user, error: userError } = await supabase
       .from("usuarios")
-      .select("id_usuario, nombre_usuario")
-      .eq("id_usuario_supabase", user_id_supabase)
+      .select("id, nombre_usuario")
+      .eq("id", user_id_supabase)
       .single();
 
     if (userError || !user) {
-      return NextResponse.json(
-        { ok: false, message: "Usuario no encontrado" },
-        { status: 404 }
-      );
+      return NextResponse.json({ ok: false, message: "Usuario no encontrado" }, { status: 404 });
     }
 
-    // Verificar que el usuario no tenga ya un sitio
+    // Verificar si ya tiene sitio (creado previamente por la Suite)
     const { data: existingSite } = await supabase
       .from("user_sites")
-      .select("id")
+      .select("id, cbf_api_key, subdomain")
       .eq("user_id_supabase", user_id_supabase)
       .single();
 
+    let cbfApiKey: string;
+    let siteId: string;
+    let siteSubdomain = subdomain;
+
     if (existingSite) {
-      return NextResponse.json(
-        { ok: false, message: "El usuario ya tiene un sitio creado" },
-        { status: 400 }
-      );
+      // Sitio ya existe — usar key existente y solo hacer deploy
+      cbfApiKey = existingSite.cbf_api_key;
+      siteId = existingSite.id;
+      siteSubdomain = existingSite.subdomain || subdomain;
+    } else {
+      // Crear sitio nuevo
+      cbfApiKey = generateCBFApiKey();
+
+      const { data: newSite, error: createError } = await supabase
+        .from("user_sites")
+        .insert({
+          user_id_supabase,
+          site_name,
+          subdomain,
+          custom_domain,
+          cbf_api_key: cbfApiKey,
+          is_active: true,
+          theme_config: {
+            primaryColor: "#3B82F6",
+            secondaryColor: "#10B981",
+            fontFamily: "Inter",
+          },
+          seo_config: {
+            title: site_name,
+            description: `Sitio web de ${user.nombre_usuario}`,
+          },
+        })
+        .select()
+        .single();
+
+      if (createError || !newSite) {
+        console.error("Error al crear sitio:", createError);
+        return NextResponse.json({ ok: false, message: "Error al crear el sitio" }, { status: 500 });
+      }
+
+      siteId = newSite.id;
     }
 
-    // Generar API Key única
-    const cbfApiKey = generateCBFApiKey(user_id_supabase);
-
-    // Crear el sitio en la base de datos
-    const { data: newSite, error: createError } = await supabase
-      .from("user_sites")
-      .insert({
-        user_id_supabase,
-        site_name,
-        subdomain,
-        custom_domain,
-        cbf_api_key: cbfApiKey,
-        is_active: true,
-        theme_config: {
-          primaryColor: "#3B82F6",
-          secondaryColor: "#10B981",
-          fontFamily: "Inter",
-        },
-        seo_config: {
-          title: site_name,
-          description: `Sitio web de ${user.nombre_usuario}`,
-        },
-      })
-      .select()
-      .single();
-
-    if (createError) {
-      console.error("Error al crear sitio:", createError);
-      return NextResponse.json(
-        { ok: false, message: "Error al crear el sitio" },
-        { status: 500 }
-      );
+    // Deploy a Vercel (fire-and-forget — fallo no bloquea la respuesta)
+    if (siteSubdomain) {
+      deployVercelProject(siteSubdomain, cbfApiKey);
     }
 
-    // Construir URL del sitio
     const siteUrl = custom_domain
       ? `https://${custom_domain}`
-      : subdomain
-      ? `https://${subdomain}.homepty.com`
+      : siteSubdomain
+      ? `https://${siteSubdomain}.homepty.com`
       : null;
 
-    // Retornar respuesta exitosa
     return NextResponse.json({
       ok: true,
-      message: "Sitio creado exitosamente",
+      message: existingSite ? "Sitio existente — deploy iniciado" : "Sitio creado y deploy iniciado",
       data: {
-        site_id: newSite.id,
+        site_id: siteId,
         user_name: user.nombre_usuario,
-        site_name: newSite.site_name,
+        site_name,
         cbf_api_key: cbfApiKey,
         site_url: siteUrl,
-        is_active: newSite.is_active,
       },
     });
   } catch (error) {
     console.error("Error en create-site:", error);
-    return NextResponse.json(
-      { ok: false, message: "Error interno del servidor" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, message: "Error interno del servidor" }, { status: 500 });
   }
 }

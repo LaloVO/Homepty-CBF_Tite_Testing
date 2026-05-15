@@ -41,7 +41,7 @@ export async function getSiteByDomain(domain: string) {
     // Retornar configuración en el formato esperado por el PageRenderer
     return {
       domain,
-      userId: siteConfig.user_id,
+      userId: siteConfig.user_id_supabase,
       config: {
         theme: {
           primary_color: siteConfig.theme_config.primaryColor,

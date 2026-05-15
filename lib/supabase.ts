@@ -73,7 +73,7 @@ export interface User {
 
 export interface UserSite {
   id: string;
-  user_id: string;
+  user_id_supabase: string;
   site_name: string;
   custom_domain: string | null;
   subdomain: string | null;

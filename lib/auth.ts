@@ -15,7 +15,7 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
     // Buscar el sitio con esta API Key
     const { data, error } = await supabase
       .from("user_sites")
-      .select("user_id, is_active")
+      .select("user_id_supabase, is_active")
       .eq("cbf_api_key", apiKey)
       .single();
 
@@ -30,7 +30,7 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
       return null;
     }
 
-    return data.user_id;
+    return data.user_id_supabase;
   } catch (error) {
     console.error("Error al verificar API Key:", error);
     return null;
