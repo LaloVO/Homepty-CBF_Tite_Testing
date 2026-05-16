@@ -50,7 +50,14 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         user: userData,
-        site: siteData || null,
+        site: siteData
+          ? {
+              ...siteData,
+              platform_config: {
+                mapbox_token: process.env.MAPBOX_ACCESS_TOKEN ?? null,
+              },
+            }
+          : null,
       },
     });
   } catch (error) {
