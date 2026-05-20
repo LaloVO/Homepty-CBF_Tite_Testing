@@ -40,6 +40,7 @@ export async function GET(
       .select("*, imagenes_propiedades(*), amenidades_propiedades(*)")
       .eq("id", propertyId)
       .eq("id_usuario", userId)
+      .neq("status", "eliminado")
       .single();
 
     if (error) {

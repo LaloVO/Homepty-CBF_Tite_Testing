@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
       .from("propiedades")
       .select("*, imagenes_propiedades(*)")
       .eq("id_usuario", userId)
+      .neq("status", "eliminado")
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
