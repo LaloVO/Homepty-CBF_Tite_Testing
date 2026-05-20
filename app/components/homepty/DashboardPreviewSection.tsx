@@ -8,7 +8,7 @@ export default function DashboardPreviewSection() {
 
                 <div className="dashboard-mockup-container relative">
                     <img
-                        src="/images/crm-for-muckup (1).png"
+                        src="/images/crm-for-muckup.svg"
                         alt="Dashboard Homepty"
                         className="dashboard-mockup w-full h-auto mx-auto"
                     />
