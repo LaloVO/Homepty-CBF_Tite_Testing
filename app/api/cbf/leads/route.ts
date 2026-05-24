@@ -179,16 +179,16 @@ ${docsUrlsStr}`;
         tipo_operacion: mappedTipoOperacion,
         tipo_propiedad_id: tipoPropiedadId,
         habitaciones: num_habitaciones ? parseInt(num_habitaciones) : null,
-        banos: num_banos ? parseFloat(num_banos) : null,
+        banos: num_banos != null ? Math.round(parseFloat(num_banos)) : null,
         estacionamientos: num_estacionamientos ? parseInt(num_estacionamientos) : null,
-        metros_cuadrados: metros_cuadrados_max ? parseFloat(metros_cuadrados_max) : null,
+        metros_cuadrados: metros_cuadrados_max ? Math.round(parseFloat(metros_cuadrados_max)) : null,
         id_estado: finalEstadoId,
         id_ciudad: finalCiudadId,
         zona: zonas_especificas || null,
         comentarios: estilo_vida_descripcion || "Solicitud de búsqueda inteligente de 6 pasos.",
         detalles_adicionales: detallesAdicionalesText,
-        presupuesto_min: presupuesto_min ? parseFloat(String(presupuesto_min).replace(/,/g, "")) : 0,
-        presupuesto_max: presupuesto_max ? parseFloat(String(presupuesto_max).replace(/,/g, "")) : 0,
+        presupuesto_min: presupuesto_min ? Math.round(parseFloat(String(presupuesto_min).replace(/,/g, ""))) : 0,
+        presupuesto_max: presupuesto_max ? Math.round(parseFloat(String(presupuesto_max).replace(/,/g, ""))) : 0,
         tipo_solicitante: "lead",
         estado_solicitud: "nueva",
       })
@@ -196,7 +196,7 @@ ${docsUrlsStr}`;
       .single();
 
     if (insertError) {
-      console.error("Error insertando solicitud de lead:", insertError);
+      console.error("Error insertando solicitud de lead — code:", insertError.code, "| message:", insertError.message, "| details:", insertError.details, "| hint:", insertError.hint);
       return NextResponse.json(
         { error: "Error al registrar la solicitud en la base de datos central: " + insertError.message },
         { status: 500 }
