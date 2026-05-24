@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       uso_destino,
       detalles_uso,
       documentos_disponibles,
+      documentos_urls,
     } = body;
 
     // Validar campos básicos indispensables
@@ -133,6 +134,25 @@ export async function POST(request: NextRequest) {
     const docsStr = Array.isArray(documentos_disponibles) ? documentos_disponibles.join(", ") : "Ninguno seleccionado";
     const precalifStr = tiene_precalificacion_crediticia ? `Sí (${institucion_crediticia || "No especificada"})` : "No";
 
+    // Mapear URLs de documentos para mostrarlas como enlaces individuales
+    let docsUrlsStr = "Ninguno cargado en expediente";
+    if (documentos_urls && typeof documentos_urls === "object") {
+      const entries = Object.entries(documentos_urls);
+      if (entries.length > 0) {
+        const labelsMap: Record<string, string> = {
+          identificacion: "Identificación Oficial (INE)",
+          comprobante_ingresos: "Comprobante de Ingresos",
+          estados_cuenta: "Estados de Cuenta",
+          comprobante_domicilio: "Comprobante de Domicilio",
+          carta_recomendacion: "Carta de Recomendación Bancaria",
+          otros: "Otros Documentos"
+        };
+        docsUrlsStr = entries
+          .map(([key, url]) => `• ${labelsMap[key] || key}: ${url}`)
+          .join("\n");
+      }
+    }
+
     const detallesAdicionalesText = `[Embudo de 6 Pasos - Sitio Satélite]
 USO Y DESTINO:
 • Uso principal: ${uso_destino || "No especificado"}
@@ -143,7 +163,10 @@ FINANCIAMIENTO:
 • Precalificación hipotecaria: ${precalifStr}
 
 EXPEDIENTE DISPONIBLE (CLIENTE):
-• Documentación lista: ${docsStr}`;
+• Documentación lista: ${docsStr}
+
+ENLACES A DOCUMENTOS (CARGADOS EN STORAGE):
+${docsUrlsStr}`;
 
     // 6. Insertar solicitud de lead calificado
     const { data: newLead, error: insertError } = await supabase
