@@ -3,6 +3,7 @@ import { getSiteByDomain } from '../lib/db';
 import { PageRenderer } from './components/PageRenderer';
 import Header from './components/homepty/Header';
 import HeroSection from './components/homepty/HeroSection';
+import ClientsCarousel from './components/homepty/ClientsCarousel';
 import DashboardPreviewSection from './components/homepty/DashboardPreviewSection';
 import FeaturesSection from './components/homepty/FeaturesSection';
 import WhiteLabelSection from './components/homepty/WhiteLabelSection';
@@ -24,6 +25,7 @@ export default async function HomePage() {
         <Header />
         <main>
           <HeroSection />
+          <ClientsCarousel />
           <DashboardPreviewSection />
           <FeaturesSection />
           <WhiteLabelSection />
