@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { getSiteByDomain } from '../lib/db';
+import { supabase, type User } from '../lib/supabase';
 import { PageRenderer } from './components/PageRenderer';
 import Header from './components/homepty/Header';
 import HeroSection from './components/homepty/HeroSection';
@@ -14,22 +15,38 @@ import Footer from './components/homepty/Footer';
 
 const HOMEPTY_MAIN_DOMAINS = ['localhost', 'homepty.com', 'www.homepty.com', 'sites.homepty.com'];
 
-export default async function HomePage() {
-  const headersList = await headers();
+type UserSlice = Pick<User, 'id' | 'email_usuario' | 'nombre_usuario'>;
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ usuario?: string }>;
+}) {
+  const [headersList, params] = await Promise.all([headers(), searchParams]);
   const rawHost = headersList.get('host') || '';
-  const domain = rawHost.replace('www.', '').replace(':3000', '');
+  const domain = rawHost.replace('www.', '').replace(/:\d+$/, '');
+
+  let user: UserSlice | null = null;
+  if (params.usuario) {
+    const { data } = await supabase
+      .from('usuarios')
+      .select('id, email_usuario, nombre_usuario')
+      .eq('id', params.usuario)
+      .single();
+    user = data ?? null;
+  }
 
   if (HOMEPTY_MAIN_DOMAINS.includes(domain) || domain === '') {
     return (
       <div className="min-h-screen">
-        <Header />
+        <Header user={user} />
         <main>
-          <HeroSection />
+          <HeroSection user={user} />
           <ClientsCarousel />
           <DashboardPreviewSection />
           <FeaturesSection />
           <WhiteLabelSection />
-          <PricingSection />
+          <PricingSection user={user} />
           <Nom247Section />
           <CTASection />
         </main>

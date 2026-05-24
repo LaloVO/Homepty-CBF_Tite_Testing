@@ -3,6 +3,11 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Star, Building2, User } from "lucide-react";
+import type { User as UserType } from "@/lib/supabase";
+
+interface PricingSectionProps {
+  user?: Pick<UserType, "id" | "email_usuario"> | null;
+}
 
 const tiers = [
   {
@@ -105,7 +110,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
-export default function PricingSection() {
+export default function PricingSection({ user }: PricingSectionProps) {
   return (
     <section id="pricing" className="py-24 px-6 bg-gradient-to-b from-background to-accent/20">
       <div className="max-w-7xl mx-auto">
@@ -200,8 +205,14 @@ export default function PricingSection() {
                     variant={tier.highlight ? "default" : "secondary"}
                     asChild
                   >
-                    <a href={tier.stripeLink} target="_blank" rel="noopener noreferrer">
-                      Adquirir Plan
+                    <a
+                      href={user
+                        ? `${tier.stripeLink}?prefilled_email=${encodeURIComponent(user.email_usuario)}&client_reference_id=${user.id}`
+                        : tier.stripeLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {user ? "Completar Setup" : "Adquirir Plan"}
                     </a>
                   </Button>
                 </CardContent>

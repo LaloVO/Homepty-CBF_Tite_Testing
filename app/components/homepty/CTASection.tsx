@@ -48,8 +48,8 @@ export default function CTASection() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button size="lg" className="text-lg px-8 py-6 bg-primary-foreground text-primary hover:bg-primary-foreground/90 group" asChild>
-            <a href="https://homepty.info/">
-              Reservar mi acceso ahora
+            <a href="#pricing">
+              Ver Planes
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </a>
           </Button>

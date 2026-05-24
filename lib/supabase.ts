@@ -92,6 +92,9 @@ export interface UserSite {
     description: string | null;
     keywords: string[];
   };
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  plan_tipo?: string | null;
   created_at: string;
   updated_at: string;
 }

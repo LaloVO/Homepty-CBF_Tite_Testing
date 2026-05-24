@@ -3,6 +3,11 @@ import { motion, useScroll, useTransform, useSpring, useInView } from "framer-mo
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Scan } from "lucide-react";
 import { useRef, useEffect } from "react";
+import type { User } from "@/lib/supabase";
+
+interface HeroSectionProps {
+  user?: Pick<User, "nombre_usuario"> | null;
+}
 
 const Counter = ({ from, to, duration = 2, shouldFormat = true }: { from: number; to: number; duration?: number; shouldFormat?: boolean }) => {
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -38,7 +43,7 @@ const Counter = ({ from, to, duration = 2, shouldFormat = true }: { from: number
   return <span ref={nodeRef} className="tabular-nums">{from}</span>;
 };
 
-export default function HeroSection() {
+export default function HeroSection({ user }: HeroSectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -96,7 +101,7 @@ export default function HeroSection() {
             >
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium backdrop-blur-sm">
                 <Sparkles className="w-4 h-4" />
-                Acceso Fundador · Preventa Exclusiva
+                {user ? "Activo · Contratación en curso" : "Planes disponibles"}
               </span>
             </motion.div>
 
@@ -134,8 +139,8 @@ export default function HeroSection() {
               transition={{ duration: 0.6, delay: 0.3 }}
             >
               <Button size="lg" className="h-14 px-8 text-lg rounded-full group shadow-[0_0_20px_-5px_rgba(0,123,255,0.4)] hover:shadow-[0_0_25px_-5px_rgba(0,123,255,0.6)] transition-all" asChild>
-                <a href="https://www.homepty.info">
-                  Reservar mi acceso
+                <a href="#pricing">
+                  {user ? "Completar mi Setup" : "Ver Planes"}
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </a>
               </Button>

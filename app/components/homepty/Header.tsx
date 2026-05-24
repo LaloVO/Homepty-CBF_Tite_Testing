@@ -3,8 +3,13 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import type { User } from "@/lib/supabase";
 
-export default function Header() {
+interface HeaderProps {
+  user?: Pick<User, "nombre_usuario"> | null;
+}
+
+export default function Header({ user }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -43,7 +48,7 @@ export default function Header() {
             Contacto
           </a>
           <Button asChild>
-            <a href="https://homepty.info/">Pre-registrarme</a>
+            <a href="#pricing">{user ? "Completar Setup" : "Adquirir Plan"}</a>
           </Button>
         </nav>
 
@@ -92,7 +97,7 @@ export default function Header() {
               Contacto
             </a>
             <Button className="w-full mt-2" asChild>
-              <a href="https://homepty.info/">Pre-registrarme</a>
+              <a href="#pricing">{user ? "Completar Setup" : "Adquirir Plan"}</a>
             </Button>
           </nav>
         </motion.div>
