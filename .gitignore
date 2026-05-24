@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# graphify (local dev tool — no commitear)
+/graphify-out/
+
+# MCP config (local)
+.mcp.json
