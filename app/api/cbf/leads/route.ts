@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
       detalles_uso,
       documentos_disponibles,
       documentos_urls,
+      cita_virtual_solicitada,
+      cita_virtual_fecha_hora,
     } = body;
 
     // Validar campos básicos indispensables
@@ -134,6 +136,11 @@ export async function POST(request: NextRequest) {
     const docsStr = Array.isArray(documentos_disponibles) ? documentos_disponibles.join(", ") : "Ninguno seleccionado";
     const precalifStr = tiene_precalificacion_crediticia ? `Sí (${institucion_crediticia || "No especificada"})` : "No";
 
+    let citaVirtualStr = "No solicitada";
+    if (cita_virtual_solicitada && cita_virtual_fecha_hora) {
+      citaVirtualStr = `Solicitada para el día/hora: ${cita_virtual_fecha_hora}`;
+    }
+
     // Mapear URLs de documentos para mostrarlas como enlaces individuales
     let docsUrlsStr = "Ninguno cargado en expediente";
     if (documentos_urls && typeof documentos_urls === "object") {
@@ -161,6 +168,9 @@ USO Y DESTINO:
 FINANCIAMIENTO:
 • Métodos de pago preferidos: ${metodosPagoStr}
 • Precalificación hipotecaria: ${precalifStr}
+
+CITA VIRTUAL:
+• Cita virtual: ${citaVirtualStr}
 
 EXPEDIENTE DISPONIBLE (CLIENTE):
 • Documentación lista: ${docsStr}
