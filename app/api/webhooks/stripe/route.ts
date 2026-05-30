@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { createHmac } from "crypto";
 import { supabase } from "@/lib/supabase";
 import { deployVercelProject } from "@/lib/vercel";
 
@@ -25,7 +26,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const { data: site, error } = await supabase
     .from("user_sites")
-    .select("id, subdomain, cbf_api_key")
+    .select("id, subdomain, cbf_api_key, referral_code")
     .eq("user_id_supabase", usuarioId)
     .single();
 
@@ -46,6 +47,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (site.subdomain) {
     deployVercelProject(site.subdomain, site.cbf_api_key);
+  }
+
+  if (site.referral_code && process.env.REFERRAL_WEBHOOK_SECRET) {
+    const payload = JSON.stringify({
+      stripe_event_id: session.id,
+      stripe_amount_cents: session.amount_total ?? 0,
+      currency: session.currency ?? "mxn",
+      referral_code: site.referral_code,
+      user_site_id: site.id,
+      customer_email: session.customer_details?.email ?? session.customer_email ?? null,
+    });
+    const sig = createHmac("sha256", process.env.REFERRAL_WEBHOOK_SECRET)
+      .update(payload)
+      .digest("hex");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.homepty.com";
+    fetch(`${appUrl}/api/referrals/conversion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Homepty-Signature": sig },
+      body: payload,
+    }).catch((err) => console.error("Error notificando conversión de referido:", err));
   }
 }
 
