@@ -145,7 +145,7 @@ export default function HeroSection({ user }: HeroSectionProps) {
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full backdrop-blur-sm bg-background/50" asChild>
-                <a href="#pricing">Ver planes</a>
+                <a href="/demos">Explora las plantillas</a>
               </Button>
             </motion.div>
           </motion.div>

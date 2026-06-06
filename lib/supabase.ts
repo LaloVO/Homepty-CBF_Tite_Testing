@@ -72,6 +72,34 @@ export interface User {
   fecha_creacion_usuario: string;
 }
 
+export interface ProjectIntake {
+  id: string;
+  template_slug: string | null;
+  project_type: string | null;
+  company_name: string | null;
+  website: string | null;
+  instagram: string | null;
+  logo_url: string | null;
+  brand_colors: string[];
+  reference_urls: string[];
+  business_info: {
+    location?: string;
+    services?: string;
+    team_size?: string;
+  };
+  vision_brief: string | null;
+  contact: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    whatsapp?: string;
+  };
+  raw_payload: Record<string, unknown> | null;
+  status: "new" | "contacted" | "in_progress" | "delivered";
+  source: string;
+  created_at: string;
+}
+
 export interface UserSite {
   id: string;
   user_id_supabase: string;

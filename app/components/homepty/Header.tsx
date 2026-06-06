@@ -38,6 +38,9 @@ export default function Header({ user }: HeaderProps) {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
+          <a href="/demos" className="text-muted-foreground hover:text-foreground transition-colors">
+            Plantillas
+          </a>
           <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
             Planes
           </a>
@@ -74,6 +77,13 @@ export default function Header({ user }: HeaderProps) {
           exit={{ opacity: 0, height: 0 }}
         >
           <nav className="flex flex-col p-6 gap-4">
+            <a
+              href="/demos"
+              className="text-muted-foreground hover:text-foreground transition-colors py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Plantillas
+            </a>
             <a
               href="#pricing"
               className="text-muted-foreground hover:text-foreground transition-colors py-2"

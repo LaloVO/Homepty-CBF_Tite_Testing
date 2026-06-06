@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const {
+      is_demo,
       nombre_completo,
       email,
       telefono,
@@ -160,7 +161,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const detallesAdicionalesText = `[Embudo de 6 Pasos - Sitio Satélite]
+    const demoPrefix = is_demo ? "[DEMO] " : "";
+    const detallesAdicionalesText = `${demoPrefix}[Embudo de 6 Pasos - Sitio Satélite]
 USO Y DESTINO:
 • Uso principal: ${uso_destino || "No especificado"}
 • Detalles del uso: ${detalles_uso || "Ninguno"}
@@ -213,7 +215,14 @@ ${docsUrlsStr}`;
       );
     }
 
-    // 7. Insertar notificación para alertas en tiempo real en el CRM
+    // 7. Insertar notificación para alertas en tiempo real en el CRM (omitir en modo demo)
+    if (is_demo) {
+      return NextResponse.json(
+        { success: true, message: "Lead demo registrado (sin notificación al asesor)", data: { id: newLead.id } },
+        { status: 201 }
+      );
+    }
+
     const { error: notifError } = await supabase
       .from("notifications")
       .insert({

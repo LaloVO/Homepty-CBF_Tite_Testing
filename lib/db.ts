@@ -1,4 +1,18 @@
-import { supabase, UserSite } from "./supabase";
+import { supabase, UserSite, ProjectIntake } from "./supabase";
+
+export async function createProjectIntake(
+  payload: Omit<ProjectIntake, "id" | "created_at">,
+  rawBody: Record<string, unknown>
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("project_intakes")
+    .insert({ ...payload, raw_payload: rawBody })
+    .select("id")
+    .single();
+
+  if (error) throw new Error("Error al guardar el intake: " + error.message);
+  return data.id;
+}
 
 /**
  * Obtiene la configuración del sitio por dominio
