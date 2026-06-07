@@ -10,11 +10,19 @@ import type { Template } from "@/lib/templates";
 function DemoIframePreview({ url, name }: { url: string; name: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.21);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (containerRef.current) {
-      setScale(containerRef.current.offsetWidth / 1440);
-    }
+    const el = containerRef.current;
+    if (!el) return;
+    setScale(el.offsetWidth / 1440);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -22,18 +30,20 @@ function DemoIframePreview({ url, name }: { url: string; name: string }) {
       ref={containerRef}
       className="relative w-full aspect-video bg-muted overflow-hidden"
     >
-      <div
-        className="absolute top-0 left-0"
-        style={{
-          width: 1440,
-          height: 810,
-          transformOrigin: "0 0",
-          transform: `scale(${scale})`,
-          pointerEvents: "none",
-        }}
-      >
-        <iframe src={url} title={name} width={1440} height={810} style={{ border: "none" }} />
-      </div>
+      {visible && (
+        <div
+          className="absolute top-0 left-0"
+          style={{
+            width: 1440,
+            height: 810,
+            transformOrigin: "0 0",
+            transform: `scale(${scale})`,
+            pointerEvents: "none",
+          }}
+        >
+          <iframe src={url} title={name} width={1440} height={810} style={{ border: "none" }} />
+        </div>
+      )}
     </div>
   );
 }

@@ -11,6 +11,11 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
     return null;
   }
 
+  // Keys de demo/placeholder — no tienen registro en DB, salir silenciosamente
+  if (apiKey.startsWith("cbf_live_PENDING")) {
+    return null;
+  }
+
   try {
     // Buscar el sitio con esta API Key
     const { data, error } = await supabase
