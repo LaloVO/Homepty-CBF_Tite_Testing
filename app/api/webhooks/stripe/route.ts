@@ -6,7 +6,9 @@ import { deployVercelProject } from "@/lib/vercel";
 
 export const dynamic = "force-dynamic";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 
 const PLAN_MAP: Record<string, string> = {
   plink_1SgcF0C0v2j6fYqmqgceO2WL: "asesor_starter",
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    event = getStripe().webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
     console.error("Firma de webhook inválida:", err);
     return NextResponse.json({ error: "Firma inválida" }, { status: 400 });
