@@ -497,7 +497,7 @@ export default function StartProjectForm({ initialTemplate, templates }: Props) 
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-2">¡Solicitud recibida!</h2>
             <p className="text-muted-foreground">
-              Te contactaremos por WhatsApp en las próximas horas para agendar la llamada de arranque.
+              Elige tu plan para activar tu sitio. Después del pago te guiamos paso a paso.
             </p>
           </div>
           {selectedTemplate && (
@@ -505,9 +505,12 @@ export default function StartProjectForm({ initialTemplate, templates }: Props) 
               Plantilla seleccionada: <strong className="text-foreground">{selectedTemplate.name}</strong>
             </div>
           )}
-          <Button asChild variant="outline" className="w-full">
-            <a href="/demos">Ver más plantillas</a>
+          <Button asChild className="w-full h-12 text-base">
+            <a href="/#pricing">Elegir mi plan y pagar →</a>
           </Button>
+          <a href="/demos" className="block text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Ver más plantillas
+          </a>
         </motion.div>
       </div>
     );

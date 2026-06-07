@@ -1,8 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ExternalLink, ArrowRight } from "lucide-react";
+
+function DemoIframePreview({ url, name }: { url: string; name: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.21);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      setScale(containerRef.current.offsetWidth / 1440);
+    }
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full aspect-video bg-muted overflow-hidden"
+    >
+      <div
+        className="absolute top-0 left-0"
+        style={{
+          width: 1440,
+          height: 810,
+          transformOrigin: "0 0",
+          transform: `scale(${scale})`,
+          pointerEvents: "none",
+        }}
+      >
+        <iframe src={url} title={name} width={1440} height={810} style={{ border: "none" }} />
+      </div>
+    </div>
+  );
+}
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import type { Template } from "@/lib/templates";
@@ -57,13 +88,8 @@ export default function DemosCatalog({ templates }: Props) {
             <Card className="overflow-hidden flex flex-col h-full hover:shadow-lg transition-shadow">
               {/* Preview image */}
               <div className="relative aspect-video bg-muted overflow-hidden">
-                {template.previewImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={template.previewImage}
-                    alt={template.name}
-                    className="w-full h-full object-cover"
-                  />
+                {template.demoUrl ? (
+                  <DemoIframePreview url={template.demoUrl} name={template.name} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
                     Vista previa próximamente
