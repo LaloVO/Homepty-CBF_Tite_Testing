@@ -17,7 +17,7 @@ export default function DemosPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-24">
-        <div className="max-w-7xl mx-auto px-6 mb-4">
+        <div className="w-full px-6 md:px-10 lg:px-16 mb-4">
           <h1 className="text-4xl font-bold text-foreground mb-3">Plantillas</h1>
           <p className="text-lg text-muted-foreground max-w-2xl">
             Elige el diseño que mejor representa tu marca. Después lo personalizamos

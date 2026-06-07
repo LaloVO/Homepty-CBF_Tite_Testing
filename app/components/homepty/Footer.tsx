@@ -3,7 +3,7 @@ import { Mail, MapPin } from "lucide-react";
 export default function Footer() {
   return (
     <footer id="footer" className="py-12 px-6 bg-foreground text-background">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full md:px-4 lg:px-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
           <div>
             <h3 className="text-2xl font-bold mb-4">Homepty</h3>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import type { User } from "@/lib/supabase";
@@ -31,19 +32,16 @@ export default function Header({ user }: HeaderProps) {
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="/" className="text-2xl font-bold text-foreground">
+      <div className="w-full px-6 md:px-10 lg:px-16 py-4 flex items-center justify-between">
+        <Link href="/" className="text-2xl font-bold text-foreground">
           Homepty
-        </a>
+        </Link>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <a href="/demos" className="text-muted-foreground hover:text-foreground transition-colors">
+          <Link href="/demos" className="text-muted-foreground hover:text-foreground transition-colors">
             Plantillas
-          </a>
-          <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-            Planes
-          </a>
+          </Link>
           <a href="https://homepty.com/whyus" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
             Nosotros
           </a>
@@ -51,7 +49,7 @@ export default function Header({ user }: HeaderProps) {
             Contacto
           </a>
           <Button asChild>
-            <a href="#pricing">{user ? "Completar Setup" : "Adquirir Plan"}</a>
+            <Link href="/#pricing">{user ? "Completar Setup" : "Adquirir Plan"}</Link>
           </Button>
         </nav>
 
@@ -77,20 +75,13 @@ export default function Header({ user }: HeaderProps) {
           exit={{ opacity: 0, height: 0 }}
         >
           <nav className="flex flex-col p-6 gap-4">
-            <a
+            <Link
               href="/demos"
               className="text-muted-foreground hover:text-foreground transition-colors py-2"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Plantillas
-            </a>
-            <a
-              href="#pricing"
-              className="text-muted-foreground hover:text-foreground transition-colors py-2"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Planes
-            </a>
+            </Link>
             <a
               href="https://homepty.com/whyus"
               target="_blank"
@@ -107,7 +98,7 @@ export default function Header({ user }: HeaderProps) {
               Contacto
             </a>
             <Button className="w-full mt-2" asChild>
-              <a href="#pricing">{user ? "Completar Setup" : "Adquirir Plan"}</a>
+              <Link href="/#pricing" onClick={() => setIsMobileMenuOpen(false)}>{user ? "Completar Setup" : "Adquirir Plan"}</Link>
             </Button>
           </nav>
         </motion.div>

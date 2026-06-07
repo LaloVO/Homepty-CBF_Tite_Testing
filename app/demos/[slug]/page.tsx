@@ -41,7 +41,7 @@ export default async function TemplateDetailPage({ params }: Props) {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-24">
-        <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="w-full px-6 md:px-10 lg:px-16 py-12">
           {/* Breadcrumb */}
           <nav className="text-sm text-muted-foreground mb-8">
             <a href="/demos" className="hover:text-foreground transition-colors">
