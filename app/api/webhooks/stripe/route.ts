@@ -4,6 +4,8 @@ import { createHmac } from "crypto";
 import { supabase } from "@/lib/supabase";
 import { deployVercelProject } from "@/lib/vercel";
 
+export const dynamic = "force-dynamic";
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const PLAN_MAP: Record<string, string> = {
