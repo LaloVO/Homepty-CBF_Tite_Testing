@@ -53,6 +53,7 @@ interface Props {
 export default function StartProjectForm({ initialTemplate, templates }: Props) {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [done, setDone] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [newRefUrl, setNewRefUrl] = useState("");
@@ -549,6 +550,31 @@ export default function StartProjectForm({ initialTemplate, templates }: Props) 
           </motion.div>
         </AnimatePresence>
 
+        {/* Consentimiento legal (solo en el último paso) */}
+        {step === STEPS.length - 1 && (
+          <div className="flex items-start gap-2 mt-6 rounded-lg border border-border bg-muted/40 p-3">
+            <input
+              type="checkbox"
+              id="accept-terms"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              disabled={submitting}
+              className="mt-0.5 h-4 w-4 rounded border-border"
+            />
+            <label htmlFor="accept-terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+              He leído y acepto los{" "}
+              <a href="https://homepty.com/terminos" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                Términos y Condiciones
+              </a>{" "}
+              y el{" "}
+              <a href="https://homepty.com/privacidad" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                Aviso de Privacidad
+              </a>{" "}
+              de Homepty.
+            </label>
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="flex items-center justify-between mt-8">
           <Button
@@ -573,7 +599,7 @@ export default function StartProjectForm({ initialTemplate, templates }: Props) 
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={!canContinue() || submitting}
+              disabled={!canContinue() || submitting || !acceptedTerms}
               className="gap-1 min-w-32"
             >
               {submitting ? (
