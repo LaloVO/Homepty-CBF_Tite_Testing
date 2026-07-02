@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       documentos_urls,
       cita_virtual_solicitada,
       cita_virtual_fecha_hora,
+      consent, // { version, acceptedAt } — aceptación del aviso de privacidad en el embudo
     } = body;
 
     // Validar campos básicos indispensables
@@ -161,6 +162,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Registro de consentimiento (evidencia LFPDPPP): versión de documentos aceptada y fecha.
+    let consentStr = "No registrado (embudo anterior a la versión con consentimiento)";
+    if (consent && typeof consent === "object" && consent.version) {
+      consentStr = `Aviso de privacidad y datos sensibles aceptados — versión ${consent.version}, fecha ${consent.acceptedAt || new Date().toISOString()}`;
+    }
+
     const demoPrefix = is_demo ? "[DEMO] " : "";
     const detallesAdicionalesText = `${demoPrefix}[Embudo de 6 Pasos - Sitio Satélite]
 USO Y DESTINO:
@@ -178,7 +185,10 @@ EXPEDIENTE DISPONIBLE (CLIENTE):
 • Documentación lista: ${docsStr}
 
 ENLACES A DOCUMENTOS (CARGADOS EN STORAGE):
-${docsUrlsStr}`;
+${docsUrlsStr}
+
+CONSENTIMIENTO:
+• ${consentStr}`;
 
     // 6. Insertar solicitud de lead calificado
     const { data: newLead, error: insertError } = await supabase

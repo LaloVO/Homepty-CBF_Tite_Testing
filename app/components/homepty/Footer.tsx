@@ -22,12 +22,12 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-background transition-colors">
+                <a href="https://homepty.com/terminos" target="_blank" rel="noopener noreferrer" className="hover:text-background transition-colors">
                   Términos y condiciones
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-background transition-colors">
+                <a href="https://homepty.com/privacidad" target="_blank" rel="noopener noreferrer" className="hover:text-background transition-colors">
                   Política de privacidad
                 </a>
               </li>
