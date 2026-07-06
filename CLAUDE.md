@@ -1,3 +1,19 @@
+## EL HARNESS OBEDECE AL SEGUNDO CEREBRO
+
+La misión y el horizonte de Homepty viven en el Segundo Cerebro:
+`/Users/eduardovo/Developer/HOMEPTY_SECOND_BRAIN`. Antes de cualquier feature nueva, lee
+`00_NORTH_STAR/` (destino) y `01_BRIDGE/` (puente hoy→destino). Jerarquía del ecosistema:
+**SB → Harness → SDD/Specs**.
+
+> **TODO — este repo aún no tiene harness SDD.** A diferencia de `homepty_new` y
+> `Homepty_welcome`, `homepty-cbf` no tiene `harness/` (CONSTITUTION/PROCESS/AGENTS/specs).
+> Cuando se bootstrapee un harness aquí, debe nacer ya **obedeciendo al SB**: Horizon Gate
+> antes de `approved/` y los campos `canvas_layer / serves_agent / okr / ai_ratio /
+> horizon_check` en el frontmatter de cada spec. Rol de cbf en el canvas: capa **Platform**
+> (backend multi-tenant / proxy hacia el Brain). Referencia: `homepty_new/harness/SB-harness-SDD.md`.
+
+---
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
