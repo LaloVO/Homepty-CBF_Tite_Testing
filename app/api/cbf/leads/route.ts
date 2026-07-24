@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (selectedCityName && selectedStateName) {
-      // Buscar en tabla de ciudades para el estado resuelto
+    if (selectedCityName) {
+      // Buscar en tabla de ciudades en cascada para el estado resuelto
       const { data: ciudadData } = await supabase
         .from("ciudades")
         .select("id_ciudad")
@@ -118,6 +118,20 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       if (ciudadData) {
         finalCiudadId = ciudadData.id_ciudad;
+      } else {
+        // Buscar de forma general en ciudades si no coincidió por estado
+        const { data: anyCiudad } = await supabase
+          .from("ciudades")
+          .select("id_ciudad, id_estado")
+          .ilike("nombre_ciudad", selectedCityName)
+          .limit(1)
+          .maybeSingle();
+        if (anyCiudad) {
+          finalCiudadId = anyCiudad.id_ciudad;
+          if (!selectedStateName) {
+            finalEstadoId = anyCiudad.id_estado;
+          }
+        }
       }
     }
 

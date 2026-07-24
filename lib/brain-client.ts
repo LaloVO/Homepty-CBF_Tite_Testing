@@ -113,18 +113,33 @@ export async function getPropertyRecommendations(
 }
 
 /**
- * Obtiene análisis de ROI para una propiedad de inversión
- * MVP: Retorna null (funcionalidad de Fase 2)
+ * Obtiene el catálogo de geografía canónico (estados y municipios/ciudades en cascada) desde el Brain
  */
-export async function getROIAnalysis(
-  propertyData: {
-    precio: number;
-    area: number;
-    tipo: string;
-    id_ciudad: number;
+export async function getGeographyCatalog(): Promise<{
+  states: { stateCode: string; name: string | null }[];
+  municipalities: { cvegeo: string; stateCode: string; name: string | null }[];
+} | null> {
+  try {
+    const response = await fetch(`${BRAIN_API_URL}/spatial.geographyCatalog`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn("[BrainClient] No se pudo obtener el catálogo de geografía del Brain, HTTP", response.status);
+      return null;
+    }
+
+    const json = await response.json();
+    if (json?.result?.data?.data) {
+      return json.result.data.data;
+    }
+    return null;
+  } catch (error) {
+    console.error("[BrainClient] Error conectando con el Brain para catálogo geográfico:", error);
+    return null;
   }
-): Promise<any> {
-  // TODO: Activar en Fase 2
-  console.log("Brain integration not active in MVP");
-  return null;
 }
+
