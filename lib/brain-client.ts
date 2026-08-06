@@ -24,15 +24,11 @@ const brainHeaders = () => {
  * Cliente tRPC para Homepty Brain
  * Los procedimientos se tipan manualmente (ver interfaces más abajo);
  * el cast a any evita inferencia de DecoratedProcedureRecord del link.
- *
- * method: "GET" — el Brain prod rechaza POST para procedures .query()
- * (405 METHOD_NOT_SUPPORTED); los queries van por GET batch.
  */
 export const brainClient = createTRPCClient<any>({
   links: [
     httpBatchLink({
       url: BRAIN_API_URL,
-      method: "GET",
       headers: brainHeaders,
     }),
   ],
