@@ -246,9 +246,12 @@ export async function brainValueEstimate(
   try {
     const result = await brainClient.valueweb.estimate.query(request);
     return result as BrainValuationResponse;
-  } catch (error) {
-    console.error("[BrainClient] Error llamando valueweb.estimate:", error);
-    return null;
+  } catch (error: any) {
+    console.error("[BrainClient] Error llamando valueweb.estimate:", error?.message, error?.shape ?? "");
+    const detail = error?.shape?.json?.data?.httpStatus
+      ? `HTTP ${error.shape.json.data.httpStatus}: ${error.shape.json.message}`
+      : error?.message ?? "unknown";
+    throw new Error(`Brain valueweb.estimate: ${detail}`);
   }
 }
 

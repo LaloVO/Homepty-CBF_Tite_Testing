@@ -82,7 +82,25 @@ export async function POST(request: NextRequest) {
     ...(body.estado_conservacion ? { estado_conservacion: String(body.estado_conservacion) as "malo" | "regular" | "bueno" | "excelente" } : {}),
   };
 
-  const valuation = await brainValueEstimate(requestPayload);
+  let valuation: Awaited<ReturnType<typeof brainValueEstimate>> | null = null;
+  try {
+    valuation = await brainValueEstimate(requestPayload);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    console.error("[Intelligence/valuation] Error llamando Brain:", error);
+    await trackBrainUsage({
+      user_id_supabase: userId,
+      cbf_api_key: apiKey,
+      brain_endpoint: "valueweb.estimate",
+      cost_units: 1,
+      status: "brain_unreachable",
+      latency_ms: Date.now() - start,
+    });
+    return NextResponse.json(
+      { error: "El Brain no respondió", detail: message },
+      { status: 502 }
+    );
+  }
   const estimateLatency = Date.now() - start;
 
   if (!valuation) {
