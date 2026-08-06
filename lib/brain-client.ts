@@ -6,6 +6,7 @@
  */
 
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import superjson from "superjson";
 
 const BRAIN_API_URL = process.env.BRAIN_API_URL || "http://localhost:3001/trpc";
 
@@ -29,6 +30,7 @@ export const brainClient = createTRPCClient<any>({
   links: [
     httpBatchLink({
       url: BRAIN_API_URL,
+      transformer: superjson,
       headers: brainHeaders,
     }),
   ],
