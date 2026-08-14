@@ -1,11 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "./supabase";
+import {
+  isLegacyGrantActive,
+  resolveSiteRuntimeAccess,
+  type SiteAccessBasis,
+  type SiteLifecycleStatus,
+} from "./site-runtime-access";
 
 export type SiteAuthContext = {
   siteId: string;
   userId: string;
   organizationId: string | null;
+  accessBasis: SiteAccessBasis;
 };
+
+async function hasActiveLegacyContract(siteId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("commercial_entitlement_grants")
+    .select("valid_from, valid_until, revoked_at")
+    .eq("site_id", siteId)
+    .eq("grant_type", "legacy_site_unlimited")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error al resolver contrato legacy del sitio:", siteId, error.code);
+    return false;
+  }
+
+  return isLegacyGrantActive(data);
+}
 
 /**
  * Verifica que la API Key proporcionada sea válida
@@ -31,13 +54,22 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
       .single();
 
     if (error || !data) {
-      console.error("API Key no encontrada. URL:", process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 40), "Error code:", error?.code, "Error msg:", error?.message, "Key prefix:", apiKey?.slice(0, 20));
+      console.error("API Key CBF no encontrada o no consultable. Error code:", error?.code);
       return null;
     }
 
-    // Verificar que el sitio esté activo
-    if (!data.is_active || !["active", "grace"].includes(data.lifecycle_status ?? "active")) {
-      console.error("Sitio inactivo para API Key:", apiKey.substring(0, 15) + "...");
+    const lifecycleStatus = (data.lifecycle_status ?? null) as SiteLifecycleStatus;
+    const needsLegacyResolution = data.is_active && lifecycleStatus === "pending";
+    const access = resolveSiteRuntimeAccess({
+      isActive: data.is_active,
+      lifecycleStatus,
+      hasActiveLegacyGrant: needsLegacyResolution
+        ? await hasActiveLegacyContract(data.id)
+        : false,
+    });
+
+    if (!access.allowed) {
+      console.error("Acceso CBF rechazado para sitio:", data.id);
       return null;
     }
 
@@ -45,6 +77,7 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
       siteId: data.id,
       userId: data.user_id_supabase,
       organizationId: data.organization_id ?? null,
+      accessBasis: access.basis,
     };
   } catch (error) {
     console.error("Error al verificar API Key:", error);

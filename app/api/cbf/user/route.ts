@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     return authResult; // Error de autenticación
   }
 
-  const { userId } = authResult;
+  const { siteId, userId } = authResult;
 
   try {
     // Obtener información del usuario
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const { data: siteData, error: siteError } = await supabase
       .from("user_sites")
       .select("*")
-      .eq("user_id_supabase", userId)
+      .eq("id", siteId)
       .single();
 
     if (siteError && siteError.code !== "PGRST116") {
