@@ -1,13 +1,9 @@
 "use client";
 import { motion, useScroll, useTransform, useSpring, useInView } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Scan } from "lucide-react";
+import { ArrowRight, Scan } from "lucide-react";
+import Link from "next/link";
 import { useRef, useEffect } from "react";
-import type { User } from "@/lib/supabase";
-
-interface HeroSectionProps {
-  user?: Pick<User, "nombre_usuario"> | null;
-}
 
 const Counter = ({ from, to, duration = 2, shouldFormat = true }: { from: number; to: number; duration?: number; shouldFormat?: boolean }) => {
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -43,7 +39,7 @@ const Counter = ({ from, to, duration = 2, shouldFormat = true }: { from: number
   return <span ref={nodeRef} className="tabular-nums">{from}</span>;
 };
 
-export default function HeroSection({ user }: HeroSectionProps) {
+export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -93,18 +89,6 @@ export default function HeroSection({ user }: HeroSectionProps) {
             style={{ y: textY, opacity: textOpacity }}
             className="will-change-transform"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-8 flex justify-center"
-            >
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium backdrop-blur-sm">
-                <Sparkles className="w-4 h-4" />
-                {user ? "Activo · Contratación en curso" : "Planes disponibles"}
-              </span>
-            </motion.div>
-
             <motion.h1
               className="text-5xl md:text-7xl lg:text-8xl font-bold text-foreground mb-8 leading-tight tracking-tight relative"
               initial={{ opacity: 0, y: 30 }}
@@ -140,12 +124,12 @@ export default function HeroSection({ user }: HeroSectionProps) {
             >
               <Button size="lg" className="h-14 px-8 text-lg rounded-full group shadow-[0_0_20px_-5px_rgba(0,123,255,0.4)] hover:shadow-[0_0_25px_-5px_rgba(0,123,255,0.6)] transition-all" asChild>
                 <a href="#pricing">
-                  {user ? "Completar mi Setup" : "Ver Planes"}
+                  Ver planes
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full backdrop-blur-sm bg-background/50" asChild>
-                <a href="/demos">Explora las plantillas</a>
+                <Link href="/plantillas">Explora referencias</Link>
               </Button>
             </motion.div>
           </motion.div>

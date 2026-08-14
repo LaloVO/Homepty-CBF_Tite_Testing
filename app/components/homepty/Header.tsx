@@ -4,13 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import type { User } from "@/lib/supabase";
-
-interface HeaderProps {
-  user?: Pick<User, "nombre_usuario"> | null;
-}
-
-export default function Header({ user }: HeaderProps) {
+export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -39,7 +33,7 @@ export default function Header({ user }: HeaderProps) {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="/demos" className="text-muted-foreground hover:text-foreground transition-colors">
+          <Link href="/plantillas" className="text-muted-foreground hover:text-foreground transition-colors">
             Plantillas
           </Link>
           <a href="https://homepty.com/whyus" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -49,7 +43,7 @@ export default function Header({ user }: HeaderProps) {
             Contacto
           </a>
           <Button asChild>
-            <Link href="/#pricing">{user ? "Completar Setup" : "Adquirir Plan"}</Link>
+            <a href="https://app.homepty.com/my-site">Contratar sitio</a>
           </Button>
         </nav>
 
@@ -76,7 +70,7 @@ export default function Header({ user }: HeaderProps) {
         >
           <nav className="flex flex-col p-6 gap-4">
             <Link
-              href="/demos"
+              href="/plantillas"
               className="text-muted-foreground hover:text-foreground transition-colors py-2"
               onClick={() => setIsMobileMenuOpen(false)}
             >
@@ -98,7 +92,7 @@ export default function Header({ user }: HeaderProps) {
               Contacto
             </a>
             <Button className="w-full mt-2" asChild>
-              <Link href="/#pricing" onClick={() => setIsMobileMenuOpen(false)}>{user ? "Completar Setup" : "Adquirir Plan"}</Link>
+              <a href="https://app.homepty.com/my-site" onClick={() => setIsMobileMenuOpen(false)}>Contratar sitio</a>
             </Button>
           </nav>
         </motion.div>

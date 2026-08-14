@@ -138,7 +138,7 @@ export default function DemosCatalog({ templates }: Props) {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Buscar plantilla..."
+              placeholder="Buscar referencia..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-9 py-2.5 bg-background border border-border/80 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
@@ -460,9 +460,6 @@ export default function DemosCatalog({ templates }: Props) {
                         Vista previa próximamente
                       </div>
                     )}
-                    <span className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm text-foreground text-xs font-medium px-2.5 py-1 rounded-full border border-border">
-                      {CATEGORY_LABELS[template.category] ?? template.category}
-                    </span>
                   </div>
 
                   <CardContent className="flex-1 pt-5">
@@ -480,8 +477,8 @@ export default function DemosCatalog({ templates }: Props) {
                       </Button>
                     ) : null}
                     <Button size="sm" className="flex-1 rounded-full" asChild>
-                      <a href={`/start-project?template=${template.slug}`}>
-                        Usar diseño
+                      <a href={`https://app.homepty.com/my-site?reference=${encodeURIComponent(template.slug)}`}>
+                        Guardar referencia
                         <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                       </a>
                     </Button>
@@ -499,7 +496,7 @@ export default function DemosCatalog({ templates }: Props) {
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-1">Sin resultados</h3>
               <p className="text-sm text-muted-foreground max-w-sm mb-5">
-                No encontramos ninguna plantilla que coincida con tus filtros actuales. Intenta ajustar tu búsqueda o restablecer los filtros.
+                No encontramos ninguna referencia que coincida con tus filtros actuales. Intenta ajustar tu búsqueda o restablecer los filtros.
               </p>
               <Button variant="outline" size="sm" className="rounded-full" onClick={handleClearFilters}>
                 Restablecer todos los filtros
@@ -511,4 +508,3 @@ export default function DemosCatalog({ templates }: Props) {
     </section>
   );
 }
-

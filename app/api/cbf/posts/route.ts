@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authMiddleware } from "@/lib/auth";
+import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     return authResult;
   }
 
-  const { userId } = authResult;
+  const inventoryUserIds = await getInventoryUserIds(authResult);
 
   try {
     const { searchParams } = new URL(request.url);
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
           imagenes_propiedades ( image_url )
         )`
       )
-      .eq("author_id", userId)
+      .in("author_id", inventoryUserIds)
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -56,9 +56,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const posts = (data ?? []).map((p: any) => {
+    const posts = (data ?? []).map((p) => {
       const tags: string[] = p.tags ?? [];
       const isBlog = tags.includes("blog") || tags.includes("articulo");
+      const property = Array.isArray(p.property) ? p.property[0] : p.property;
       return {
         id: p.id,
         title: p.title,
@@ -66,11 +67,11 @@ export async function GET(request: NextRequest) {
         tags,
         post_type: isBlog ? "blog" : "post",
         created_at: p.created_at,
-        property: p.property
+        property: property
           ? {
-              ...p.property,
-              id: String(p.property.id),
-              imagenes_propiedades: p.property.imagenes_propiedades ?? [],
+              ...property,
+              id: String(property.id),
+              imagenes_propiedades: property.imagenes_propiedades ?? [],
             }
           : null,
       };

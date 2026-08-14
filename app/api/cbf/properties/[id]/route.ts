@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authMiddleware } from "@/lib/auth";
+import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -22,7 +22,7 @@ export async function GET(
     return authResult; // Error de autenticación
   }
 
-  const { userId } = authResult;
+  const inventoryUserIds = await getInventoryUserIds(authResult);
   const { id } = await params;
 
   try {
@@ -39,7 +39,7 @@ export async function GET(
       .from("propiedades")
       .select("*, imagenes_propiedades(*), amenidades_propiedades(*)")
       .eq("id", propertyId)
-      .eq("id_usuario", userId)
+      .in("id_usuario", inventoryUserIds)
       .neq("status", "eliminado")
       .single();
 

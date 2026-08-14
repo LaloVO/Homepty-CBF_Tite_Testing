@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authMiddleware } from "@/lib/auth";
+import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     return authResult; // Error de autenticación
   }
 
-  const { userId } = authResult;
+  const inventoryUserIds = await getInventoryUserIds(authResult);
 
   try {
     // Obtener parámetros de query
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("propiedades")
       .select("*, imagenes_propiedades(*)")
-      .eq("id_usuario", userId)
+      .in("id_usuario", inventoryUserIds)
       .neq("status", "eliminado")
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);

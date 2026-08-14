@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "./supabase";
 
+export type SiteAuthContext = {
+  siteId: string;
+  userId: string;
+  organizationId: string | null;
+};
+
 /**
  * Verifica que la API Key proporcionada sea válida
  * @param apiKey - CBF API Key del header Authorization
  * @returns userId si es válida, null si no lo es
  */
-export async function verifyApiKey(apiKey: string): Promise<string | null> {
+export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | null> {
   if (!apiKey || !apiKey.startsWith("cbf_live_")) {
     return null;
   }
@@ -20,7 +26,7 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
     // Buscar el sitio con esta API Key
     const { data, error } = await supabase
       .from("user_sites")
-      .select("user_id_supabase, is_active")
+      .select("id, user_id_supabase, organization_id, is_active, lifecycle_status")
       .eq("cbf_api_key", apiKey)
       .single();
 
@@ -30,12 +36,16 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
     }
 
     // Verificar que el sitio esté activo
-    if (!data.is_active) {
+    if (!data.is_active || !["active", "grace"].includes(data.lifecycle_status ?? "active")) {
       console.error("Sitio inactivo para API Key:", apiKey.substring(0, 15) + "...");
       return null;
     }
 
-    return data.user_id_supabase;
+    return {
+      siteId: data.id,
+      userId: data.user_id_supabase,
+      organizationId: data.organization_id ?? null,
+    };
   } catch (error) {
     console.error("Error al verificar API Key:", error);
     return null;
@@ -48,7 +58,7 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
  */
 export async function authMiddleware(
   request: NextRequest
-): Promise<{ userId: string } | NextResponse> {
+): Promise<SiteAuthContext | NextResponse> {
   const authHeader = request.headers.get("Authorization");
 
   if (!authHeader) {
@@ -68,14 +78,24 @@ export async function authMiddleware(
   }
 
   const apiKey = parts[1];
-  const userId = await verifyApiKey(apiKey);
+  const context = await verifyApiKey(apiKey);
 
-  if (!userId) {
+  if (!context) {
     return NextResponse.json(
       { error: "Invalid or inactive API Key" },
       { status: 401 }
     );
   }
 
-  return { userId };
+  return context;
+}
+
+export async function getInventoryUserIds(context: SiteAuthContext): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("site_inventory_sources")
+    .select("user_id")
+    .eq("site_id", context.siteId)
+    .eq("enabled", true);
+  if (error || !data?.length) return [context.userId];
+  return [...new Set([context.userId, ...data.map((row) => row.user_id)])];
 }

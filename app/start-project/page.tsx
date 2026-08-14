@@ -1,23 +1,13 @@
-import type { Metadata } from "next";
-import { getTemplates } from "@/lib/templates";
-import StartProjectForm from "./StartProjectForm";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Inicia tu proyecto | Homepty Sites",
-  description:
-    "Cuéntanos tu visión. Construimos tu sitio inmobiliario en tiempo récord.",
-};
-
-interface Props {
-  searchParams: Promise<{ template?: string }>;
-}
-
-export default async function StartProjectPage({ searchParams }: Props) {
-  const { template } = await searchParams;
-  const templates = getTemplates();
-  const initialTemplate = template ?? templates[0]?.slug ?? "";
-
-  return (
-    <StartProjectForm initialTemplate={initialTemplate} templates={templates} />
-  );
+export default async function StartProjectPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ template?: string; reference?: string }>;
+}) {
+  const params = await searchParams;
+  const reference = params.reference ?? params.template;
+  redirect(reference
+    ? `https://app.homepty.com/my-site?reference=${encodeURIComponent(reference)}`
+    : "https://app.homepty.com/my-site");
 }

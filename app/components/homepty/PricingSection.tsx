@@ -1,225 +1,76 @@
-"use client";
-import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Check, Star, Building2, User } from "lucide-react";
-import type { User as UserType } from "@/lib/supabase";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 
-interface PricingSectionProps {
-  user?: Pick<UserType, "id" | "email_usuario"> | null;
+type OfferRow = {
+  plan_id: "asesor" | "agencia";
+  price_mxn_cents: number;
+  plans: { nombre: string; price_mxn_cents: number | null; limits: Record<string, number | null> } | null;
+};
+
+function money(cents: number | null) {
+  if (cents == null) return "Contrato personalizado";
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(cents / 100);
 }
+export default async function PricingSection() {
+  const { data } = await supabase
+    .from("site_setup_offers")
+    .select("plan_id, price_mxn_cents, plans(nombre, price_mxn_cents, limits)")
+    .eq("is_active", true)
+    .in("plan_id", ["asesor", "agencia"])
+    .order("price_mxn_cents", { ascending: true });
+  const offers = (data ?? []) as unknown as OfferRow[];
 
-const tiers = [
-  {
-    title: "Asesor Starter",
-    subtitle: "",
-    icon: User,
-    setup: "$2,499 MXN",
-    setupNote: "Por la creación de tu web app",
-    subscription: "$899 MXN",
-    subscriptionNote: "Por mantenimiento mas:",
-    features: [
-      "Web app conectada a Homepty",
-      "Análisis de rentabilidad de la zona: Análisis rápido de precios, demanda y oportunidades por zona",
-      "25 Análisis de rentabilidad profunda de la propiedad: Reportes detallados con proyecciones financieras, históricos, tasa de absorción y más",
-      "Comparativas de propiedades por criterio no solo por características",
-      "Estimador de valor comercial",
-      "Asistentes y Automatización AI",
-      "Gestión y CRM",
-      "Publicación de propiedades ilimitadas",
-      "Homepty Edu (Capacitación)"
-    ],
-    highlight: true,
-    stripeLink: "https://buy.stripe.com/4gMdR8buHdt83erbmWew80b"
-  },
-  {
-    title: "Asesor Independiente",
-    subtitle: "Conectamos tu pagina a Homepty y obten:",
-    icon: User,
-    setup: "$1,699 MXN",
-    setupNote: "Por la integración de los módulos",
-    subscription: "$899 MXN",
-    subscriptionNote: "Por mantenimiento mas:",
-    features: [
-      "Análisis de rentabilidad de la zona: Análisis rápido de precios, demanda y oportunidades por zona",
-      "25 Análisis de rentabilidad profunda de la propiedad: Reportes detallados con proyecciones financieras, históricos, tasa de absorción y más",
-      "Comparativas de propiedades por criterio no solo por características",
-      "Estimador de valor comercial",
-      "Asistentes y Automatización AI",
-      "Gestión y CRM",
-      "Publicación de propiedades ilimitadas",
-      "Homepty Edu (Capacitación)"
-    ],
-    stripeLink: "https://buy.stripe.com/28E8wO8ivbl0dT5aiSew80c"
-  },
-  {
-    title: "Inmobiliaria",
-    subtitle: "",
-    icon: Building2,
-    setup: "$3,499 MXN",
-    setupNote: "Por la creación de tu web app",
-    subscription: "$1,798 MXN",
-    subscriptionNote: "Por mantenimiento mas:",
-    features: [
-      "Web app conectada a Homepty",
-      "Perfiles para 5 usuarios de tu inmobiliaria",
-      "Análisis de rentabilidad de la zona: Análisis rápido de precios, demanda y oportunidades por zona",
-      "50 Análisis de rentabilidad profunda de la propiedad: Reportes detallados con proyecciones financieras, históricos, tasa de absorción y más",
-      "Comparativas de propiedades por criterio no solo por características",
-      "Estimador de valor comercial",
-      "Asistentes y Automatización AI",
-      "Gestión y CRM",
-      "Publicación de propiedades ilimitadas",
-      "Homepty Edu (Capacitación)"
-    ],
-    stripeLink: "https://buy.stripe.com/7sYaEWfKXexc8yL2Qqew80d"
-  },
-  {
-    title: "Inmobiliaria Plus",
-    subtitle: "Conectamos tu pagina y CRM a Homepty y obten:",
-    icon: Building2,
-    setup: "$2,699 MXN",
-    setupNote: "Por la integración de los módulos",
-    subscription: "$1,798 MXN",
-    subscriptionNote: "Por mantenimiento mas:",
-    features: [
-      "Perfiles para 5 usuarios de tu inmobiliaria",
-      "Análisis de rentabilidad de la zona: Análisis rápido de precios, demanda y oportunidades por zona",
-      "50 Análisis de rentabilidad profunda de la propiedad: Reportes detallados con proyecciones financieras, históricos, tasa de absorción y más",
-      "Comparativas de propiedades por criterio no solo por características",
-      "Estimador de valor comercial",
-      "Asistentes y Automatización AI",
-      "Gestión y CRM",
-      "Publicación de propiedades ilimitadas",
-      "Homepty Edu (Capacitación)"
-    ],
-    stripeLink: "https://buy.stripe.com/28EaEWeGTexc02fez8ew80e"
-  }
-];
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0 }
-};
-
-export default function PricingSection({ user }: PricingSectionProps) {
   return (
-    <section id="pricing" className="py-24 px-6 bg-gradient-to-b from-background to-accent/20">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            <Star className="w-4 h-4" />
-            Acceso Fundador
-          </span>
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Planes de Preventa
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Precios exclusivos para fundadores. Asegura tu lugar antes del lanzamiento público.
-          </p>
-        </motion.div>
+    <section id="pricing" className="bg-gradient-to-b from-background to-accent/20 px-6 py-24">
+      <div className="mx-auto max-w-6xl">
+        <div className="mx-auto mb-14 max-w-2xl text-center">
+          <h2 className="text-4xl font-bold text-foreground md:text-5xl">Un plan Homepty, un sitio hecho para tu marca</h2>
+          <p className="mt-5 text-lg leading-8 text-muted-foreground">El pago y los upgrades se gestionan en Homepty. Aquí no vendemos plantillas ni creamos sitios antes de confirmar la orden.</p>
+        </div>
 
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          {tiers.map((tier, idx) => (
-            <motion.div key={idx} variants={itemVariants}>
-              <Card className={`flex flex-col h-full relative overflow-hidden transition-all duration-300 hover:shadow-xl ${tier.highlight
-                ? "border-primary shadow-lg ring-2 ring-primary/20"
-                : "border-border hover:border-primary/30"
-                }`}>
-                {tier.highlight && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary/60" />
-                )}
-
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${tier.highlight ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                      }`}>
-                      <tier.icon className="w-5 h-5" />
+        {offers.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {offers.map((offer) => {
+              const agency = offer.plan_id === "agencia";
+              const monthly = offer.plans?.price_mxn_cents ?? null;
+              return (
+                <Card key={offer.plan_id} className="flex h-full flex-col border-border bg-card/80 shadow-sm">
+                  <CardHeader>
+                    <h3 className="text-2xl font-bold text-foreground">{offer.plans?.nombre ?? offer.plan_id}</h3>
+                    <p className="mt-2 text-muted-foreground">{agency ? "Presencia de organización con inventario autorizado." : "Presencia profesional ligada a tu inventario personal."}</p>
+                  </CardHeader>
+                  <CardContent className="flex flex-1 flex-col">
+                    <div className="grid grid-cols-2 gap-4 border-y border-border py-5">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Setup único</p>
+                        <p className="mt-1 text-2xl font-bold text-foreground">{money(offer.price_mxn_cents)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Plan mensual</p>
+                        <p className="mt-1 text-2xl font-bold text-foreground">{money(monthly)}</p>
+                      </div>
                     </div>
-                    {tier.highlight && (
-                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
-                        Popular
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground">{tier.title}</h3>
-                  <p className="text-sm text-muted-foreground min-h-[2.5rem] flex items-center">{tier.subtitle}</p>
-                </CardHeader>
-
-                <CardContent className="flex flex-col flex-1 pt-0">
-                  <div className="space-y-4 mb-6">
-                    <div className="p-4 rounded-xl bg-muted/50">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Setup único</p>
-                      <p className="text-lg font-bold text-foreground">{tier.setup}</p>
-                      {'setupNote' in tier && (
-                        <p className="text-[10px] text-muted-foreground mt-1 italic">
-                          {tier.setupNote as string}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex justify-start -my-2 relative z-10 px-1">
-                      <span className="px-2 py-0.5 rounded-full bg-background border border-border text-[10px] text-muted-foreground font-medium">
-                        + Más tu primer mensualidad
-                      </span>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                      <p className="text-xs text-primary uppercase tracking-wide mb-1">Acceso Fundador</p>
-                      <p className="text-lg font-bold text-primary">{tier.subscription}</p>
-                      <p className="text-xs text-muted-foreground">{tier.subscriptionNote}</p>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-3 mb-8 flex-1">
-                    {tier.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm">
-                        <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    className={`w-full ${tier.highlight ? "" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}
-                    variant={tier.highlight ? "default" : "secondary"}
-                    asChild
-                  >
-                    <a
-                      href={user
-                        ? `${tier.stripeLink}?prefilled_email=${encodeURIComponent(user.email_usuario)}&client_reference_id=${user.id}`
-                        : tier.stripeLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {user ? "Completar Setup" : "Adquirir Plan"}
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
+                    <ul className="my-6 flex-1 space-y-3 text-sm text-muted-foreground">
+                      <li className="flex gap-3"><Check className="mt-0.5 size-4 shrink-0 text-primary" />Sitio nuevo diseñado desde cero</li>
+                      <li className="flex gap-3"><Check className="mt-0.5 size-4 shrink-0 text-primary" />Product Shell inmobiliario conectado a CBF</li>
+                      <li className="flex gap-3"><Check className="mt-0.5 size-4 shrink-0 text-primary" />Un sitio por cuenta con lifecycle reversible</li>
+                    </ul>
+                    <Button size="lg" asChild>
+                      <a href="https://app.homepty.com/my-site">Contratar desde Homepty</a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-border bg-card p-8 text-center">
+            <p className="text-muted-foreground">El catálogo se está sincronizando. Puedes continuar de forma segura en Homepty.</p>
+            <Button className="mt-5" asChild><a href="https://app.homepty.com/my-site">Abrir Mi Sitio</a></Button>
+          </div>
+        )}
       </div>
     </section>
   );

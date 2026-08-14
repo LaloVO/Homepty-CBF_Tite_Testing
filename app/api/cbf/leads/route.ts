@@ -18,13 +18,14 @@ export async function POST(request: NextRequest) {
     return authResult; // Retorna error de autenticación 401
   }
 
-  const { userId } = authResult; // userId es el user_id_supabase del asesor dueño del sitio
+  const { userId, siteId, organizationId } = authResult;
 
   try {
     const body = await request.json();
 
     const {
       is_demo,
+      lead_kind,
       nombre_completo,
       email,
       telefono,
@@ -33,7 +34,6 @@ export async function POST(request: NextRequest) {
       num_habitaciones,
       num_banos,
       num_estacionamientos,
-      metros_cuadrados_min,
       metros_cuadrados_max,
       estados_deseados,
       ciudades_deseadas,
@@ -63,6 +63,9 @@ export async function POST(request: NextRequest) {
 
     // 2. Mapear tipo_operacion ("compra" / "renta" -> "Comprar" / "Rentar")
     const mappedTipoOperacion = tipo_operacion === "renta" ? "Rentar" : "Comprar";
+    const siteIntent = lead_kind === "seller"
+      ? "seller"
+      : tipo_operacion === "renta" || lead_kind === "renter" ? "renter" : "buyer";
 
     // 3. Mapear tipo_propiedad string a tipo_propiedad_id (número)
     const propertyTypeStr = String(tipo_propiedad || "").toLowerCase().trim();
@@ -183,7 +186,7 @@ export async function POST(request: NextRequest) {
     }
 
     const demoPrefix = is_demo ? "[DEMO] " : "";
-    const detallesAdicionalesText = `${demoPrefix}[Embudo de 6 Pasos - Sitio Satélite]
+    const detallesAdicionalesText = `${demoPrefix}[${siteIntent === "seller" ? "Captación de propiedad" : "Embudo de 6 Pasos"} - Sitio Satélite]
 USO Y DESTINO:
 • Uso principal: ${uso_destino || "No especificado"}
 • Detalles del uso: ${detalles_uso || "Ninguno"}
@@ -227,6 +230,10 @@ CONSENTIMIENTO:
         presupuesto_max: presupuesto_max ? Math.round(parseFloat(String(presupuesto_max).replace(/,/g, ""))) : 0,
         tipo_solicitante: "lead",
         estado_solicitud: "nueva",
+        organization_id: organizationId,
+        source_site_id: siteId,
+        site_intent: siteIntent,
+        origen: "cbf_satellite_funnel",
       })
       .select()
       .single();
@@ -252,13 +259,18 @@ CONSENTIMIENTO:
       .insert({
         user_id: userId,
         type: "nueva_solicitud",
-        title: "Búsqueda Inteligente Recibida",
-        body: `${nombre_completo} completó el embudo calificado de 6 pasos en tu sitio satélite.`,
+        title: siteIntent === "seller" ? "Propiedad para captación" : "Búsqueda Inteligente Recibida",
+        body: siteIntent === "seller"
+          ? `${nombre_completo} solicitó seguimiento para vender una propiedad desde tu sitio satélite.`
+          : `${nombre_completo} completó el embudo calificado de 6 pasos en tu sitio satélite.`,
         entity_type: "solicitud",
         entity_id: String(newLead.id),
         metadata: {
           tipo_operacion: mappedTipoOperacion,
           source: "cbf_satellite_funnel",
+          source_site_id: siteId,
+          organization_id: organizationId,
+          site_intent: siteIntent,
         },
         read: false,
       });

@@ -1,8 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-// CBF corre server-side — usa service role para bypassear RLS en user_sites y propiedades
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// CBF corre exclusivamente server-side. El anon key jamás sustituye la
+// credencial de servicio para contratos internos o datos multi-tenant.
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error(
@@ -123,6 +124,11 @@ export interface UserSite {
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   plan_tipo?: string | null;
+  organization_id?: string | null;
+  site_order_id?: string | null;
+  lifecycle_status?: "pending" | "active" | "grace" | "suspended";
+  grace_ends_at?: string | null;
+  factory_slug?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,5 @@
 import { headers } from 'next/headers';
 import { getSiteByDomain } from '../lib/db';
-import { supabase, type User } from '../lib/supabase';
 import { PageRenderer } from './components/PageRenderer';
 import Header from './components/homepty/Header';
 import HeroSection from './components/homepty/HeroSection';
@@ -15,38 +14,22 @@ import Footer from './components/homepty/Footer';
 
 const HOMEPTY_MAIN_DOMAINS = ['localhost', 'homepty.com', 'www.homepty.com', 'sites.homepty.com'];
 
-type UserSlice = Pick<User, 'id' | 'email_usuario' | 'nombre_usuario'>;
-
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ usuario?: string }>;
-}) {
-  const [headersList, params] = await Promise.all([headers(), searchParams]);
+export default async function HomePage() {
+  const headersList = await headers();
   const rawHost = headersList.get('host') || '';
   const domain = rawHost.replace('www.', '').replace(/:\d+$/, '');
-
-  let user: UserSlice | null = null;
-  if (params.usuario) {
-    const { data } = await supabase
-      .from('usuarios')
-      .select('id, email_usuario, nombre_usuario')
-      .eq('id', params.usuario)
-      .single();
-    user = data ?? null;
-  }
 
   if (HOMEPTY_MAIN_DOMAINS.includes(domain) || domain === '') {
     return (
       <div className="min-h-screen">
-        <Header user={user} />
+        <Header />
         <main>
-          <HeroSection user={user} />
+          <HeroSection />
           <ClientsCarousel />
           <DashboardPreviewSection />
           <FeaturesSection />
           <WhiteLabelSection />
-          <PricingSection user={user} />
+          <PricingSection />
           <Nom247Section />
           <CTASection />
         </main>
@@ -78,7 +61,7 @@ export default async function HomePage({
     );
   }
 
-  const page = site.config.pages.find((p: any) => p.route === '/');
+  const page = site.config.pages.find((candidate) => candidate.route === '/');
 
   if (!page) {
     return <div className="p-10">Página de inicio no configurada</div>;
