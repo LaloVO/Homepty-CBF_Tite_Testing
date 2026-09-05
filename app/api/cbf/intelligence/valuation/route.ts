@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
   const llmResult = valuationResultForLLM(valuation);
   const explanation = await brainInterpretValuation(
-    `satellite-${userId}`,
+    `satellite-${userId}-${Date.now()}`,
     llmResult
   );
   const interpretLatency = Date.now() - start;
