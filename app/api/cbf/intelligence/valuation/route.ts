@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
   );
   const interpretLatency = Date.now() - start;
 
-  const usageError1 = await trackBrainUsage({
+  await trackBrainUsage({
     user_id_supabase: userId,
     cbf_api_key: apiKey,
     brain_endpoint: "valueweb.estimate",
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     status: "ok",
     latency_ms: estimateLatency,
   });
-  const usageError2 = await trackBrainUsage({
+  await trackBrainUsage({
     user_id_supabase: userId,
     cbf_api_key: apiKey,
     brain_endpoint: "ai.interpretation.valuation",
@@ -173,10 +173,6 @@ export async function POST(request: NextRequest) {
       comparables: valuation.inmuebles.length,
       status,
       search_params: valuation.search_params,
-    },
-    debug: {
-      usageError1: usageError1?.message ?? null,
-      usageError2: usageError2?.message ?? null,
     },
   });
 }

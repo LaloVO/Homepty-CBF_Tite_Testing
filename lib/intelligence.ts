@@ -36,9 +36,8 @@ export interface BrainUsageEntry {
 /**
  * Registra consumo de un endpoint del Brain. Fire-and-forget: nunca lanza
  * errores hacia el caller (el billing no debe romper la experiencia).
- * Retorna el error si ocurre (para diagnóstico).
  */
-export async function trackBrainUsage(entry: BrainUsageEntry): Promise<Error | null> {
+export async function trackBrainUsage(entry: BrainUsageEntry): Promise<void> {
   try {
     const p = getPool();
     await p.query(
@@ -54,10 +53,8 @@ export async function trackBrainUsage(entry: BrainUsageEntry): Promise<Error | n
         entry.latency_ms ?? null,
       ]
     );
-    return null;
   } catch (error) {
     console.error("[Intelligence] Error registrando consumo del Brain:", error);
-    return error instanceof Error ? error : new Error(String(error));
   }
 }
 
