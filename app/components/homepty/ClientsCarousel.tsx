@@ -38,7 +38,7 @@ export default function ClientsCarousel() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Definición de las inmobiliarias (3 reales y 5 mockups premium)
+  // Definición de los sitios reales de clientes
   const clients: ClientAgency[] = [
     {
       id: "raquel",
@@ -110,128 +110,72 @@ export default function ClientsCarousel() {
       properties: []
     },
     {
-      id: "luxe",
-      domain: "luxe.homepty.com",
-      name: "Luxe & Co.",
-      slogan: "Curating Exceptional Spaces",
-      primaryColor: "#0F0F11",     // Deep Charcoal
-      secondaryColor: "#D4AF37",   // Antique Gold
-      accentColor: "#F7F5F0",      // Champagne Cream
+      id: "dreams",
+      domain: "ruth-flores-cbf.vercel.app",
+      realUrl: "https://ruth-flores-cbf.vercel.app/",
+      isReal: true,
+      name: "dreams Inmobiliaria",
+      slogan: "Experiencias inmobiliarias extraordinarias",
+      primaryColor: "#4B285C",
+      secondaryColor: "#C9A96E",
+      accentColor: "#F8F3FA",
       fontFamily: "font-serif",
-      heroTitle: "Curating Exceptional Spaces",
-      heroSubtitle: "Exclusive high-end residences tailored for discerning lifestyles.",
-      buildingType: "Mansiones de Mármol & Penthouses",
+      heroTitle: "Encuentra el lugar de tus sueños",
+      heroSubtitle: "Asesoría inmobiliaria boutique en Saltillo.",
+      buildingType: "Residencial boutique",
       logo: (
         <svg className="h-7 w-auto" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <text x="10" y="28" fontFamily="Georgia, serif" fontSize="24" fontWeight="bold" fill="currentColor" letterSpacing="2">L&C</text>
-          <line x1="75" y1="12" x2="75" y2="28" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
-          <text x="88" y="26" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="300" fill="currentColor" letterSpacing="3">LUXE & CO.</text>
+          <text x="12" y="27" fontFamily="Georgia, serif" fontSize="22" fontWeight="bold" fill="currentColor">dreams</text>
+          <text x="91" y="27" fontFamily="system-ui, sans-serif" fontSize="8" fontWeight="600" fill="currentColor" letterSpacing="1.5">INMOBILIARIA</text>
         </svg>
       ),
-      properties: [
-        { title: "Villas de Mármol", price: "$4,850,000 USD", location: "Polanco, CDMX", beds: 4, baths: 5 },
-        { title: "Duplex Penthouse", price: "$6,200,000 USD", location: "Lomas de Chapultepec", beds: 5, baths: 6 }
-      ]
+      properties: []
     },
     {
-      id: "apex",
-      domain: "apex.homepty.com",
-      name: "Apex Living",
-      slogan: "High-Trust Luxury Residences",
-      primaryColor: "#0D2C22",     // Emerald Dark
-      secondaryColor: "#E6C594",   // Warm Gold Sand
-      accentColor: "#F4F7F5",      // Forest Mist
+      id: "ijb",
+      domain: "betsabeearias.homepty.com",
+      realUrl: "https://betsabeearias.homepty.com/",
+      isReal: true,
+      name: "IJB Asesoría",
+      slogan: "Soluciones inmobiliarias y jurídicas",
+      primaryColor: "#0F172A",
+      secondaryColor: "#D4AF37",
+      accentColor: "#F8FAFC",
       fontFamily: "font-sans",
-      heroTitle: "High-Trust Luxury Residences",
-      heroSubtitle: "Sustainable architectural masterpieces engineered for supreme comfort.",
-      buildingType: "Residenciales Inteligentes & Sostenibles",
+      heroTitle: "Asesoría inmobiliaria integral",
+      heroSubtitle: "Rentas, ventas y pólizas jurídicas con respaldo profesional.",
+      buildingType: "Asesoría inmobiliaria",
       logo: (
         <svg className="h-7 w-auto" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M25 8L39 30H11L25 8Z" fill="currentColor" />
-          <path d="M25 15L33 28H17L25 15Z" fill="#0D2C22" />
-          <text x="50" y="27" fontFamily="system-ui, sans-serif" fontSize="20" fontWeight="900" fill="currentColor" letterSpacing="1">APEX</text>
-          <text x="110" y="27" fontFamily="system-ui, sans-serif" fontSize="12" fontWeight="300" fill="currentColor" letterSpacing="2">LIVING</text>
+          <text x="12" y="28" fontFamily="system-ui, sans-serif" fontSize="24" fontWeight="900" fill="currentColor" letterSpacing="2">IJB</text>
+          <line x1="62" y1="11" x2="62" y2="29" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
+          <text x="74" y="26" fontFamily="system-ui, sans-serif" fontSize="12" fontWeight="600" fill="currentColor" letterSpacing="1">ASESORÍA</text>
         </svg>
       ),
-      properties: [
-        { title: "Skyline Residence", price: "$2,950,000 USD", location: "Santa Fe, CDMX", beds: 3, baths: 3.5 },
-        { title: "Eco-Mansion Forestal", price: "$3,800,000 USD", location: "Valle de Bravo", beds: 4, baths: 4.5 }
-      ]
+      properties: []
     },
     {
-      id: "horizon",
-      domain: "horizon.homepty.com",
-      name: "Horizon Properties",
-      slogan: "Find Your Coastal Sanctuary",
-      primaryColor: "#0F2C59",     // Deep Ocean Blue
-      secondaryColor: "#00D4FF",   // Electric Cyan
-      accentColor: "#F0F6FC",      // Sea Foam White
+      id: "roma",
+      domain: "roma-km-cbf.vercel.app",
+      realUrl: "https://roma-km-cbf.vercel.app/",
+      isReal: true,
+      name: "Roma KM Inmobiliaria",
+      slogan: "Comercialización y certeza jurídica",
+      primaryColor: "#0F2532",
+      secondaryColor: "#01ACBC",
+      accentColor: "#F5F5F5",
       fontFamily: "font-sans",
-      heroTitle: "Find Your Coastal Sanctuary",
-      heroSubtitle: "Bright, open-concept spaces framing spectacular infinite ocean horizons.",
-      buildingType: "Condos Frente al Mar & Villas de Playa",
+      heroTitle: "Soluciones inmobiliarias integrales",
+      heroSubtitle: "Comercialización, servicios notariales y asesoría jurídica.",
+      buildingType: "Inmobiliaria y servicios notariales",
       logo: (
         <svg className="h-7 w-auto" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 24C18 20 22 28 30 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-          <path d="M10 18C18 14 22 22 30 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
-          <circle cx="20" cy="12" r="4" fill="currentColor" />
-          <text x="42" y="26" fontFamily="system-ui, sans-serif" fontSize="18" fontWeight="800" fill="currentColor" letterSpacing="2">HORIZON</text>
+          <circle cx="23" cy="20" r="13" stroke="currentColor" strokeWidth="2.5" />
+          <path d="M16 25L23 12L30 25" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
+          <text x="45" y="27" fontFamily="system-ui, sans-serif" fontSize="20" fontWeight="800" fill="currentColor" letterSpacing="1.5">ROMA KM</text>
         </svg>
       ),
-      properties: [
-        { title: "Villas Careyes", price: "$5,300,000 USD", location: "Costa Careyes, Jal.", beds: 5, baths: 5 },
-        { title: "Marina Bay Condo", price: "$1,890,000 USD", location: "Puerto Vallarta", beds: 2, baths: 2 }
-      ]
-    },
-    {
-      id: "terra",
-      domain: "terra.homepty.com",
-      name: "Terra Capital",
-      slogan: "Solid Ground for Investments",
-      primaryColor: "#3A231C",     // Rich Terracotta
-      secondaryColor: "#DF7A5F",   // Soft Burnt Rust
-      accentColor: "#FAF7F5",      // Clay Sand
-      fontFamily: "font-sans",
-      heroTitle: "Solid Ground for High-Yield Investments",
-      heroSubtitle: "Strategic development land and premier industrial assets optimized for yield.",
-      buildingType: "Zonas Industriales & Desarrollos Comerciales",
-      logo: (
-        <svg className="h-7 w-auto" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="22" cy="20" r="12" stroke="currentColor" strokeWidth="2.5" />
-          <path d="M16 20H28" stroke="currentColor" strokeWidth="2.5" />
-          <path d="M22 14V26" stroke="currentColor" strokeWidth="2.5" />
-          <text x="44" y="26" fontFamily="system-ui, sans-serif" fontSize="18" fontWeight="700" fill="currentColor" letterSpacing="1.5">TERRA</text>
-          <text x="105" y="26" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="300" fill="currentColor" letterSpacing="2.5">CAPITAL</text>
-        </svg>
-      ),
-      properties: [
-        { title: "San Pedro Tower Suite", price: "$1,650,000 USD", location: "San Pedro, NL", beds: 2, baths: 2 },
-        { title: "Lote Industrial Plus", price: "$7,900,000 USD", location: "El Marqués, Qro.", beds: 0, baths: 0 }
-      ]
-    },
-    {
-      id: "vanguard",
-      domain: "vanguard.homepty.com",
-      name: "Vanguard Realty",
-      slogan: "AI-Powered Real Estate Brokerage",
-      primaryColor: "#121214",     // Cyber Gray
-      secondaryColor: "#9E7AFF",   // Electric Purple
-      accentColor: "#18181C",      // Dark Tech Board
-      fontFamily: "font-mono",
-      heroTitle: "AI-Powered Real Estate Brokerage",
-      heroSubtitle: "Hyper-personalized property matching powered by predictive neural models.",
-      buildingType: "Lofts Domóticos & Smart Penthouses",
-      logo: (
-        <svg className="h-7 w-auto" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 10L20 30L28 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M22 10L30 30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" opacity="0.5" />
-          <text x="40" y="27" fontFamily="monospace" fontSize="18" fontWeight="bold" fill="currentColor" letterSpacing="1">VANGUARD</text>
-        </svg>
-      ),
-      properties: [
-        { title: "Condesa Smart Loft", price: "$990,000 USD", location: "Condesa, CDMX", beds: 1, baths: 1.5 },
-        { title: "Roma Automation Penthouse", price: "$1,720,000 USD", location: "Roma Norte, CDMX", beds: 2, baths: 2 }
-      ]
+      properties: []
     }
   ];
 
