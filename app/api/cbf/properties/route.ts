@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
  * - tipo: filtrar por tipo de propiedad
  * - id_tipo_accion: filtrar por tipo de acción (1=Venta, 2=Renta, etc.)
  * - is_unit: filtrar por unidades (true/false)
+ * - parent_id: filtrar unidades hijas por desarrollo
  */
 export async function GET(request: NextRequest) {
   // Autenticar la solicitud
@@ -33,11 +34,12 @@ export async function GET(request: NextRequest) {
     const tipo = searchParams.get("tipo");
     const idTipoAccion = searchParams.get("id_tipo_accion");
     const isUnit = searchParams.get("is_unit");
+    const parentId = searchParams.get("parent_id");
 
     // Construir query
     let query = supabase
       .from("propiedades")
-      .select("*, imagenes_propiedades(*)")
+      .select("*, imagenes_propiedades(*), amenidades_propiedades(*)", { count: "exact" })
       .in("id_usuario", inventoryUserIds)
       .neq("status", "eliminado")
       .order("created_at", { ascending: false })
@@ -52,6 +54,13 @@ export async function GET(request: NextRequest) {
     }
     if (isUnit !== null) {
       query = query.eq("is_unit", isUnit === "true");
+    }
+    if (parentId !== null) {
+      const parsedParentId = Number(parentId);
+      if (!Number.isInteger(parsedParentId) || parsedParentId <= 0) {
+        return NextResponse.json({ error: "parent_id inválido" }, { status: 400 });
+      }
+      query = query.eq("parent_id", parsedParentId);
     }
 
     const { data, error, count } = await query;
@@ -70,7 +79,7 @@ export async function GET(request: NextRequest) {
       pagination: {
         limit,
         offset,
-        total: count || data?.length || 0,
+        total: count ?? data?.length ?? 0,
       },
     });
   } catch (error) {
