@@ -1,16 +1,7 @@
 import { headers } from 'next/headers';
 import { getSiteByDomain } from '../lib/db';
 import { PageRenderer } from './components/PageRenderer';
-import Header from './components/homepty/Header';
-import HeroSection from './components/homepty/HeroSection';
-import ClientsCarousel from './components/homepty/ClientsCarousel';
-import DashboardPreviewSection from './components/homepty/DashboardPreviewSection';
-import FeaturesSection from './components/homepty/FeaturesSection';
-import WhiteLabelSection from './components/homepty/WhiteLabelSection';
-import Nom247Section from './components/homepty/Nom247Section';
-import PricingSection from './components/homepty/PricingSection';
-import CTASection from './components/homepty/CTASection';
-import Footer from './components/homepty/Footer';
+import SitesLanding from './components/homepty/redesign/SitesLanding';
 
 const HOMEPTY_MAIN_DOMAINS = ['localhost', 'homepty.com', 'www.homepty.com', 'sites.homepty.com'];
 
@@ -20,22 +11,7 @@ export default async function HomePage() {
   const domain = rawHost.replace('www.', '').replace(/:\d+$/, '');
 
   if (HOMEPTY_MAIN_DOMAINS.includes(domain) || domain === '') {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main>
-          <HeroSection />
-          <ClientsCarousel />
-          <DashboardPreviewSection />
-          <FeaturesSection />
-          <WhiteLabelSection />
-          <PricingSection />
-          <Nom247Section />
-          <CTASection />
-        </main>
-        <Footer />
-      </div>
-    );
+    return <SitesLanding />;
   }
 
   const site = await getSiteByDomain(domain);

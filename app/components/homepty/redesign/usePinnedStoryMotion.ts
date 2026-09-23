@@ -1,0 +1,169 @@
+"use client";
+
+import { useCallback, useRef, type RefObject } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
+
+const LAST_STORY_INDEX = 4;
+
+export function usePinnedStoryMotion(
+  rootRef: RefObject<HTMLDivElement | null>,
+  setActive: (index: number) => void,
+) {
+  const triggerRef = useRef<ScrollTrigger | null>(null);
+  const activeRef = useRef(0);
+
+  useGSAP(
+    () => {
+      const root = rootRef.current;
+      if (!root) return;
+
+      const frames = gsap.utils.toArray<HTMLElement>(".story-frame", root);
+      const copies = gsap.utils.toArray<HTMLElement>(".story-copy-item", root);
+      const pin = root.querySelector<HTMLElement>(".story-pin");
+
+      if (!pin || frames.length < 2 || copies.length !== frames.length) return;
+
+      const media = gsap.matchMedia();
+      media.add(
+        "(prefers-reduced-motion: no-preference) and (min-width: 821px)",
+        () => {
+          gsap.set(frames.slice(1), {
+            autoAlpha: 0,
+            y: 90,
+            scale: 1.08,
+            filter: "blur(8px)",
+            clipPath: "inset(16% 6% 0% 6% round 30px)",
+          });
+          gsap.set(copies.slice(1), { autoAlpha: 0, y: 28 });
+          gsap.set(frames[0], {
+            autoAlpha: 1,
+            y: 0,
+            scale: 1,
+            filter: "blur(0px)",
+            clipPath: "inset(0% 0% 0% 0% round 24px)",
+            zIndex: 20,
+          });
+          gsap.set(copies[0], { autoAlpha: 1, y: 0 });
+
+          const timeline = gsap.timeline({ defaults: { ease: "none" } });
+
+          for (let index = 1; index < frames.length; index += 1) {
+            const previousFrame = frames[index - 1];
+            const currentFrame = frames[index];
+            const previousCopy = copies[index - 1];
+            const currentCopy = copies[index];
+            const position = (index - 1) * 1.24;
+
+            timeline
+              .set(currentFrame, { zIndex: 10 + index }, position)
+              .to(
+                previousFrame,
+                {
+                  scale: 0.87,
+                  y: -66,
+                  rotationX: 2.2,
+                  autoAlpha: 0.2,
+                  filter: "blur(8px)",
+                  clipPath: "inset(0% 4% 20% 4% round 28px)",
+                  duration: 0.94,
+                },
+                position,
+              )
+              .fromTo(
+                currentFrame,
+                {
+                  autoAlpha: 0,
+                  y: 92,
+                  scale: 1.085,
+                  rotationX: -2.4,
+                  filter: "blur(8px)",
+                  clipPath: "inset(17% 6% 0% 6% round 32px)",
+                },
+                {
+                  autoAlpha: 1,
+                  y: 0,
+                  scale: 1,
+                  rotationX: 0,
+                  filter: "blur(0px)",
+                  clipPath: "inset(0% 0% 0% 0% round 24px)",
+                  duration: 0.94,
+                },
+                position + 0.18,
+              )
+              .to(
+                previousCopy,
+                { autoAlpha: 0, y: -24, duration: 0.42 },
+                position + 0.05,
+              )
+              .fromTo(
+                currentCopy,
+                { autoAlpha: 0, y: 28 },
+                { autoAlpha: 1, y: 0, duration: 0.52 },
+                position + 0.4,
+              )
+              .set(currentFrame, { zIndex: 30 + index }, position + 0.58)
+              .set(previousFrame, { zIndex: index }, position + 0.6)
+              .to(
+                previousFrame,
+                {
+                  autoAlpha: 0,
+                  scale: 0.82,
+                  y: -96,
+                  filter: "blur(10px)",
+                  duration: 0.32,
+                },
+                position + 0.72,
+              );
+          }
+
+          const trigger = ScrollTrigger.create({
+            animation: timeline,
+            trigger: root,
+            pin,
+            start: "top top",
+            end: () => `+=${window.innerHeight * LAST_STORY_INDEX * 0.96}`,
+            scrub: 0.72,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              const index = Math.round(self.progress * LAST_STORY_INDEX);
+              if (index === activeRef.current) return;
+              activeRef.current = index;
+              setActive(index);
+            },
+          });
+
+          triggerRef.current = trigger;
+          return () => {
+            triggerRef.current = null;
+          };
+        },
+      );
+
+      return () => media.revert();
+    },
+    { scope: rootRef },
+  );
+
+  return useCallback(
+    (index: number) => {
+      const trigger = triggerRef.current;
+      if (!trigger) {
+        activeRef.current = index;
+        setActive(index);
+        return;
+      }
+
+      const progress = index / LAST_STORY_INDEX;
+      window.scrollTo({
+        top: trigger.start + (trigger.end - trigger.start) * progress,
+        behavior: "smooth",
+      });
+    },
+    [setActive],
+  );
+}
