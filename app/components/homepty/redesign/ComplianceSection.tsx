@@ -5,62 +5,62 @@ export default function ComplianceSection() {
         <div className="compliance">
           <div className="legal-ui reveal">
             <div className="legal-head">
-              <strong>{"Checklist de publicación"}</strong>
-              <span>{"Validación activa"}</span>
+              <strong>{"Seguimiento LFPIORPI"}</strong>
+              <span>{"Por operación"}</span>
             </div>
             <div className="legal-body">
               <div className="check">
-                <i>{"✓"}</i>
+                <i>{"01"}</i>
                 <div>
-                  <strong>{"Información comercial"}</strong>
-                  <small>{"Campos y datos visibles en la ficha."}</small>
+                  <strong>{"Identificación del cliente"}</strong>
+                  <small>{"Datos y documentos que acreditan su identidad."}</small>
                 </div>
-                <em>{"completo"}</em>
+                <em>{"Revisar"}</em>
               </div>
               <div className="check">
-                <i>{"✓"}</i>
+                <i>{"02"}</i>
                 <div>
-                  <strong>{"Publicidad y material visual"}</strong>
-                  <small>
-                    {"Revisión de información mostrada al usuario."}
-                  </small>
+                  <strong>{"Beneficiario controlador"}</strong>
+                  <small>{"Declaración y soporte, cuando corresponda."}</small>
                 </div>
-                <em>{"completo"}</em>
+                <em>{"Verificar"}</em>
               </div>
               <div className="check">
-                <i>{"✓"}</i>
+                <i>{"03"}</i>
                 <div>
-                  <strong>{"Canales de atención"}</strong>
-                  <small>
-                    {"Datos de contacto y seguimiento disponibles."}
-                  </small>
+                  <strong>{"Expediente de la operación"}</strong>
+                  <small>{"Documentos y evidencia que deben conservarse."}</small>
                 </div>
-                <em>{"activo"}</em>
+                <em>{"Organizar"}</em>
               </div>
               <div className="check">
-                <i>{"✓"}</i>
+                <i>{"04"}</i>
                 <div>
-                  <strong>{"Trazabilidad"}</strong>
-                  <small>
-                    {"Registro de cambios y contexto de publicación."}
-                  </small>
+                  <strong>{"Evaluación de riesgo"}</strong>
+                  <small>{"Información necesaria para valorar el caso."}</small>
                 </div>
-                <em>{"activo"}</em>
+                <em>{"Evaluar"}</em>
+              </div>
+              <div className="check">
+                <i>{"05"}</i>
+                <div>
+                  <strong>{"Avisos al SAT"}</strong>
+                  <small>{"Revisión del supuesto y umbral aplicables."}</small>
+                </div>
+                <em>{"Determinar"}</em>
               </div>
             </div>
           </div>
           <div className="legal-copy reveal">
-            <h3>
-              {
-                "El cumplimiento no debería aparecer como una página olvidada en el footer."
-              }
-            </h3>
+            <h2>
+              {"La LFPIORPI también forma parte de tu operación inmobiliaria."}
+            </h2>
             <div className="section-kicker reveal">
-              {"Cumplimiento integrado al producto"}
+              {"Ley antilavado · expedientes y avisos"}
             </div>
             <p>
               {
-                "Puede formar parte del flujo de publicación, revisión y atención. La interfaz hace visible qué falta y qué ya está listo, reduciendo dependencia de checklists manuales dispersos."
+                "En actividades inmobiliarias sujetas a la ley antilavado, la identificación del cliente, el expediente y los Avisos dependen de la operación y los umbrales aplicables. Homepty organiza la información y muestra lo pendiente para que tu equipo pueda darle seguimiento."
               }
             </p>
           </div>

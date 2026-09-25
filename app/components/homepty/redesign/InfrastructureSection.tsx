@@ -13,7 +13,7 @@ export default function InfrastructureSection() {
         </div>
         <p className="section-lead reveal">
           {
-            "La propuesta de Homepty Sites debe vender una arquitectura de producto, no una página terminada: nuevas capacidades pueden incorporarse sin reconstruir la presencia digital desde cero."
+            "Tu appweb comienza con tu marca y tus propiedades. Con el tiempo, puede ofrecer a cada visitante más herramientas para decidir: estimar el valor de un inmueble, hacer cálculos, consultar datos e insights del mercado y solicitar servicios, sin salir de tu sitio."
           }
         </p>
         <div className="architecture reveal">
@@ -39,7 +39,7 @@ export default function InfrastructureSection() {
               <div className="layer" style={{ "--x": "9px" } as CSSProperties}>
                 <i>{"02"}</i>
                 <div>
-                  <strong>{"Product shell inmobiliario"}</strong>
+                  <strong>{"Tu catálogo y herramientas de venta"}</strong>
                   <small>
                     {"Búsqueda, mapa, fichas, comparador, contacto"}
                   </small>

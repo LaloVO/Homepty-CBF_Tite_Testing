@@ -5,9 +5,9 @@ export default function SiteSection() {
     <section className="section soft site-showcase" id="capabilities">
       <div className="section-inner site-intro">
         <h2 className="section-title reveal">
-          {"No cinco landing pages. "}
+          {"La diferencia no está en cómo se ve una propiedad. "}
           <span className="blue">
-            {"Un mismo producto público que cambia de intención."}
+            {"Está en lo que el sitio puede hacer."}
           </span>
         </h2>
         <div className="section-kicker reveal">
@@ -15,7 +15,7 @@ export default function SiteSection() {
         </div>
         <p className="section-lead reveal">
           {
-            "Comprar, explorar, vender, solicitar y estimar viven bajo la misma identidad, navegación y capa de datos. El scroll recorre esos estados como una sola experiencia."
+            "La interfaz pública y la operación privada comparten una misma lógica: buscar, entender, atender y convertir sin saltar entre micrositios desconectados."
           }
         </p>
       </div>
