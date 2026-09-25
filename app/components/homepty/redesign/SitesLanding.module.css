@@ -520,6 +520,15 @@
   font-size: 9px;
 }
 
+.root :global(.footer a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.root :global(.footer a:hover) {
+  text-decoration: underline;
+}
+
 .root :global(.reveal) {
   opacity: 0;
   transform: translateY(22px);

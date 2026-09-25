@@ -56,8 +56,8 @@ export default function SitesLanding() {
           <ConversionSection />
         </main>
         <footer className="footer">
-          <span>{"© 2026 Homepty · Prototipo de rediseño"}</span>
-          <span>{"Producto inmobiliario · datos · IA · operación"}</span>
+          <span>{"© 2026 Homepty"}</span>
+          <a href="mailto:contacto@homepty.info">contacto@homepty.info</a>
         </footer>
       </PageMotion>
     </div>

@@ -36,11 +36,6 @@ export default function HeroSection() {
               {"Ver la experiencia del sitio"}
             </a>
           </div>
-          <div className="hero-note">
-            {
-              "Pinned scrollytelling · transiciones scrubbed · producto real, no screenshots"
-            }
-          </div>
         </div>
       </div>
       <SuiteStory />
