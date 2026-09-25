@@ -46,6 +46,17 @@ export default function SitesLanding() {
             <a className="nav-cta" href="https://app.homepty.com/">
               {"Crear mi appweb"}
             </a>
+            <details className="nav-mobile">
+              <summary aria-label="Abrir menú de navegación">
+                <span>{"Menú"}</span>
+                <span className="nav-menu-icon" aria-hidden="true"></span>
+              </summary>
+              <div className="nav-mobile-panel">
+                <Link href="/plantillas">{"Plantillas"}</Link>
+                <a href="https://homepty.com/whyus">{"Nosotros"}</a>
+                <a href="https://app.homepty.com/">{"Crear mi appweb"}</a>
+              </div>
+            </details>
           </nav>
         </div>
         <main id="top">

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import SuiteMockup from "./SuiteMockups";
+import MobileStoryControls from "./MobileStoryControls";
 import { usePinnedStoryMotion } from "./usePinnedStoryMotion";
 
 export default function SuiteStory() {
@@ -143,6 +144,7 @@ export default function SuiteStory() {
                 <span>{"Inteligencia"}</span>
               </button>
             </div>
+            <MobileStoryControls active={active} selectStory={selectStory} />
           </div>
           <div className="story-visual-column">
             <div className="story-ambient-grid"></div>

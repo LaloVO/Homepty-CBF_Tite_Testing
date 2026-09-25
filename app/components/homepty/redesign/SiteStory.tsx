@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { usePinnedStoryMotion } from "./usePinnedStoryMotion";
+import MobileStoryControls from "./MobileStoryControls";
 
 export default function SiteStory() {
   const [active, setActive] = useState(0);
@@ -500,6 +501,7 @@ export default function SiteStory() {
                 <span>{"Estimador"}</span>
               </button>
             </div>
+            <MobileStoryControls active={active} selectStory={selectStory} />
           </div>
         </div>
       </div>

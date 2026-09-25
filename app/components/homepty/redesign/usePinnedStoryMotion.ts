@@ -19,6 +19,7 @@ export function usePinnedStoryMotion(
   introFullWidth = false,
 ) {
   const triggerRef = useRef<ScrollTrigger | null>(null);
+  const mobileTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const activeRef = useRef(0);
   const introFractionRef = useRef(0);
 
@@ -43,6 +44,8 @@ export function usePinnedStoryMotion(
       media.add(
         "(prefers-reduced-motion: no-preference) and (min-width: 821px)",
         () => {
+          activeRef.current = 0;
+          setActive(0);
           gsap.set(frames, { zIndex: (index) => 20 + index });
           gsap.set(frames.slice(1), {
             autoAlpha: 0,
@@ -96,6 +99,7 @@ export function usePinnedStoryMotion(
                 (timeline.time() - introDuration) /
                   (timeline.duration() - introDuration),
               );
+              if (!Number.isFinite(storyProgress)) return;
               const index = Math.round(storyProgress * LAST_STORY_INDEX);
               if (index === activeRef.current) return;
               activeRef.current = index;
@@ -229,6 +233,16 @@ export function usePinnedStoryMotion(
         },
       );
 
+      media.add("(max-width: 820px)", () => {
+        activeRef.current = 0;
+        setActive(0);
+        return () => {
+          mobileTimelineRef.current?.kill();
+          mobileTimelineRef.current = null;
+          gsap.set([...frames, ...copies], { clearProps: "all" });
+        };
+      });
+
       return () => media.revert();
     },
     { scope: rootRef },
@@ -236,10 +250,45 @@ export function usePinnedStoryMotion(
 
   return useCallback(
     (index: number) => {
+      if (!Number.isInteger(index) || index < 0 || index > LAST_STORY_INDEX) {
+        return;
+      }
       const trigger = triggerRef.current;
       if (!trigger) {
+        const root = rootRef.current;
+        const previous = activeRef.current;
+        if (index === previous) return;
+        const frames = root?.querySelectorAll<HTMLElement>(".story-frame");
+        const copies = root?.querySelectorAll<HTMLElement>(".story-copy-item");
+        const reducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        mobileTimelineRef.current?.kill();
         activeRef.current = index;
         setActive(index);
+        if (!frames || !copies || reducedMotion || window.innerWidth > 820) {
+          return;
+        }
+
+        const direction = index > previous ? 1 : -1;
+        const outgoing = frames[previous];
+        const incoming = frames[index];
+        const outgoingCopy = copies[previous];
+        const incomingCopy = copies[index];
+        if (!outgoing || !incoming || !outgoingCopy || !incomingCopy) return;
+
+        gsap.set(incoming, { autoAlpha: 0, x: direction * 28, scale: 0.97 });
+        gsap.set(incomingCopy, { autoAlpha: 0, y: 12 });
+        mobileTimelineRef.current = gsap
+          .timeline({ defaults: { ease: "power2.out" } })
+          .to(outgoing, { autoAlpha: 0, x: -direction * 24, duration: 0.28 }, 0)
+          .to(outgoingCopy, { autoAlpha: 0, y: -12, duration: 0.2 }, 0)
+          .to(
+            incoming,
+            { autoAlpha: 1, x: 0, scale: 1, duration: 0.46 },
+            0.12,
+          )
+          .to(incomingCopy, { autoAlpha: 1, y: 0, duration: 0.36 }, 0.2);
         return;
       }
 
@@ -251,6 +300,6 @@ export function usePinnedStoryMotion(
         behavior: "smooth",
       });
     },
-    [setActive],
+    [rootRef, setActive],
   );
 }

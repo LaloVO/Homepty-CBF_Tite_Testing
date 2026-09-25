@@ -137,6 +137,9 @@
 .root :global(.nav-links a:hover) {
   color: var(--ink);
 }
+.root :global(.nav-mobile) {
+  display: none;
+}
 .root :global(.nav-cta),
 .root :global(.btn-primary),
 .root :global(.btn-secondary) {
@@ -656,6 +659,9 @@
   border-color: var(--blue);
   background: var(--blue);
   box-shadow: 0 0 0 5px #eaf2ff;
+}
+.root :global(.mobile-story-controls) {
+  display: none;
 }
 .root :global(.story-visual-column) {
   position: relative;
@@ -2060,6 +2066,66 @@
   .root :global(.nav-links) {
     display: none;
   }
+  .root :global(.nav-cta) {
+    display: none;
+  }
+  .root :global(.nav-mobile) {
+    display: block;
+    position: relative;
+  }
+  .root :global(.nav-mobile summary) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    min-height: 44px;
+    border-radius: 12px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+  }
+  .root :global(.nav-mobile summary::-webkit-details-marker) {
+    display: none;
+  }
+  .root :global(.nav-menu-icon) {
+    display: block;
+    width: 19px;
+    height: 12px;
+    border-top: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    position: relative;
+  }
+  .root :global(.nav-menu-icon:after) {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 4px;
+    border-top: 2px solid currentColor;
+  }
+  .root :global(.nav-mobile-panel) {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    width: min(260px, calc(100vw - 32px));
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+  .root :global(.nav-mobile-panel a) {
+    display: block;
+    padding: 13px 14px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .root :global(.nav-mobile-panel a:hover) {
+    background: var(--blue-soft);
+  }
   .root :global(.nav) {
     height: 54px;
   }
@@ -2227,57 +2293,167 @@
   .root :global(.story-shell),
   .root :global(.site-story-shell) {
     height: auto;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .root :global(.site-copy-column) {
+    order: 0;
+  }
+  .root :global(.site-visual-column) {
+    order: 1;
   }
   .root :global(.story-copy-column) {
-    padding: 0 0 22px;
+    padding: 0;
   }
   .root :global(.site-copy-column) {
     padding-left: 0;
   }
   .root :global(.story-copy-stack) {
-    min-height: 205px;
+    min-height: 0;
   }
   .root :global(.story-copy-item) {
     position: absolute;
+  }
+  .root :global(.story-copy-item.active) {
+    position: relative;
   }
   .root :global(.story-copy-item h2) {
     font-size: 48px;
   }
   .root :global(.story-step-rail) {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0;
-    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-top: 18px;
+    padding: 4px 1px 8px;
+    scrollbar-width: none;
   }
   .root :global(.story-step-rail:before) {
-    left: 5%;
-    right: 5%;
-    top: 10px;
-    bottom: auto;
-    width: auto;
-    height: 1px;
+    display: none;
   }
   .root :global(.story-step) {
-    display: grid;
-    justify-items: center;
-    gap: 7px;
-    text-align: center;
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    text-align: left;
   }
   .root :global(.story-step span) {
-    font-size: 6.8px;
+    font-size: 12px;
+  }
+  .root :global(.story-step.active) {
+    border-color: var(--blue);
+    background: var(--blue-soft);
+  }
+  .root :global(.mobile-story-controls) {
+    display: block;
+    margin-top: 10px;
+  }
+  .root :global(.mobile-story-controls p) {
+    margin: 0 0 9px;
+    color: #66768a;
+    font-size: 12px;
+  }
+  .root :global(.mobile-story-controls > div) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .root :global(.mobile-story-controls button) {
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .root :global(.mobile-story-controls button:disabled) {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .root :global(.mobile-story-controls span) {
+    color: #66768a;
+    font-size: 12px;
   }
   .root :global(.story-visual-column) {
-    height: 620px;
+    height: auto;
   }
-  .root :global(.site-visual-column) {
-    height: 620px;
+  .root :global(.suite-story .story-visual-column) {
+    height: calc((100vw - 32px) * 0.5732421875);
+  }
+  .root :global(.site-story .story-visual-column) {
+    height: min(680px, calc((100vw - 30px) * 1.88));
+  }
+  .root :global(.site-frame-stack) {
+    width: min(360px, 100%);
+    margin: auto;
   }
   .root :global(.story-frame) {
     max-width: none;
+    height: 100%;
   }
   .root :global(.product-window) {
-    height: 600px;
-    min-height: 600px;
+    height: 100%;
+    min-height: 0;
+  }
+  .root :global(.site-frame-stack .product-window) {
+    height: 100%;
+    border: 4px solid #24334a;
+    border-radius: 32px;
+    box-shadow: 0 26px 70px rgba(21, 47, 78, 0.18);
+  }
+  .root :global(.public-window) {
+    min-height: 0;
+  }
+  .root :global(.public-hero-copy) {
+    padding: 22px 18px;
+    justify-content: flex-start;
+  }
+  .root :global(.public-hero-copy h3) {
+    font-size: clamp(24px, 7vw, 30px);
+    margin: 8px 0 10px;
+  }
+  .root :global(.public-top) {
+    height: 52px;
+    padding: 0 14px;
+  }
+  .root :global(.public-top > button) {
+    margin-left: auto;
+  }
+  .root :global(.public-home),
+  .root :global(.public-map-layout),
+  .root :global(.intent-module),
+  .root :global(.valuation-ui) {
+    height: calc(100% - 52px);
+  }
+  .root :global(.public-search) {
+    margin-top: 14px;
+  }
+  .root :global(.form-step),
+  .root :global(.request-card) {
+    padding: 15px;
+  }
+  .root :global(.form-step h4),
+  .root :global(.request-card h4) {
+    margin-bottom: 10px;
+  }
+  .root :global(.form-map-mini) {
+    height: 65px;
+  }
+  .root :global(.valuation-result) {
+    padding: 14px;
+  }
+  .root :global(.valuation-result svg) {
+    height: 100px;
+    margin-top: 10px;
   }
   .root :global(.suite-ui) {
     grid-template-columns: 1fr;
@@ -2316,13 +2492,19 @@
     display: none;
   }
   .root :global(.public-home) {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
   }
   .root :global(.public-hero-visual) {
-    display: none;
+    display: block;
+    flex: 1;
+    min-height: 150px;
   }
   .root :global(.public-map-layout) {
     grid-template-columns: 1fr;
+  }
+  .root :global(.public-map) {
+    height: 100%;
   }
   .root :global(.public-map-layout aside) {
     display: none;
@@ -2331,22 +2513,49 @@
   .root :global(.request-module),
   .root :global(.valuation-ui) {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .root :global(.intent-copy),
   .root :global(.valuation-copy) {
+    display: block;
+    padding: 20px 18px 0;
+  }
+  .root :global(.intent-copy h3),
+  .root :global(.valuation-copy h3) {
+    font-size: 25px;
+    margin: 6px 0 9px;
+  }
+  .root :global(.intent-copy p),
+  .root :global(.valuation-copy p) {
+    font-size: 10px;
+    margin: 0;
+  }
+  .root :global(.intent-points),
+  .root :global(.intent-quote),
+  .root :global(.valuation-fields) {
     display: none;
   }
   .root :global(.intent-form) {
-    padding: 22px;
+    padding: 12px;
+    align-items: flex-start;
   }
   .root :global(.request-card) {
-    margin: auto;
+    margin: auto 12px;
   }
   .root :global(.valuation-result) {
-    margin: 22px;
+    margin: 12px;
   }
   .root :global(.site-story) {
-    padding-bottom: 80px;
+    padding-bottom: 24px;
+  }
+  .root :global(.story-depth-label) {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .root :global(.suite-story .story-visual-column) {
+    height: calc((100vw - 22px) * 0.5732421875);
   }
 }
 
