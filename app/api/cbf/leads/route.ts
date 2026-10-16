@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
 import { leerIdPropiedad, resolverOperacionDelLead } from "@/lib/lead-operation";
-import { supabase } from "@/lib/supabase";
+import { apuntaARutaDeSitio, leerDocumentosDelLead, referenciaDelArchivo } from "@/lib/site-files";
+import { verificarArchivosSubidos } from "@/lib/site-files-server";
+import { supabase, supabaseUrl } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +50,8 @@ export async function POST(request: NextRequest) {
       uso_destino,
       detalles_uso,
       documentos_disponibles,
-      documentos_urls,
+      documentos_urls, // sitios anteriores: URLs que el propio sitio subió a Storage
+      documentos, // { <documento>: <ruta> } subidos con permiso de CBF (POST /api/cbf/uploads)
       cita_virtual_solicitada,
       cita_virtual_fecha_hora,
       consent, // { version, acceptedAt } — aceptación del aviso de privacidad en el embudo
@@ -61,6 +64,19 @@ export async function POST(request: NextRequest) {
         { error: "Faltan datos personales obligatorios (nombre_completo, email, telefono)" },
         { status: 400 }
       );
+    }
+
+    // Documentos subidos con permiso de CBF: sólo rutas emitidas para ESTE sitio y que ya existan.
+    const documentosSubidos = leerDocumentosDelLead(documentos, siteId);
+    if (!documentosSubidos.ok) {
+      return NextResponse.json({ error: documentosSubidos.error }, { status: 400 });
+    }
+    if (documentosSubidos.documentos.length) {
+      const verificados = await verificarArchivosSubidos("documentos-leads", documentosSubidos.documentos.map((d) => d.ruta));
+      if (!verificados.ok) return NextResponse.json({ error: verificados.error }, { status: verificados.status });
+    }
+    if (documentos_urls && typeof documentos_urls === "object" && Object.values(documentos_urls).some((url) => apuntaARutaDeSitio(url, supabaseUrl))) {
+      return NextResponse.json({ error: "Los archivos subidos con permiso de CBF se registran en documentos, no en documentos_urls" }, { status: 400 });
     }
 
     // HPY-205 — La referencia del inmueble viaja al CRM. Sólo vale una propiedad del inventario
@@ -213,23 +229,29 @@ export async function POST(request: NextRequest) {
       citaVirtualStr = `Solicitada para el día/hora: ${cita_virtual_fecha_hora}`;
     }
 
-    // Mapear URLs de documentos para mostrarlas como enlaces individuales
+    // Mapear URLs de documentos para mostrarlas como enlaces individuales. Las de los sitios
+    // anteriores llegan tal cual; las subidas con permiso de CBF se guardan como referencia al objeto
+    // (la Suite firma el enlace al abrirlo; ver lib/site-files.ts).
+    const enlacesDocumentos: Record<string, unknown> = {
+      ...(documentos_urls && typeof documentos_urls === "object" ? documentos_urls : {}),
+      ...Object.fromEntries(
+        documentosSubidos.documentos.map((d) => [d.clave, referenciaDelArchivo(supabaseUrl, "documentos-leads", d.ruta)])
+      ),
+    };
     let docsUrlsStr = "Ninguno cargado en expediente";
-    if (documentos_urls && typeof documentos_urls === "object") {
-      const entries = Object.entries(documentos_urls);
-      if (entries.length > 0) {
-        const labelsMap: Record<string, string> = {
-          identificacion: "Identificación Oficial (INE)",
-          comprobante_ingresos: "Comprobante de Ingresos",
-          estados_cuenta: "Estados de Cuenta",
-          comprobante_domicilio: "Comprobante de Domicilio",
-          carta_recomendacion: "Carta de Recomendación Bancaria",
-          otros: "Otros Documentos"
-        };
-        docsUrlsStr = entries
-          .map(([key, url]) => `• ${labelsMap[key] || key}: ${url}`)
-          .join("\n");
-      }
+    const entries = Object.entries(enlacesDocumentos);
+    if (entries.length > 0) {
+      const labelsMap: Record<string, string> = {
+        identificacion: "Identificación Oficial (INE)",
+        comprobante_ingresos: "Comprobante de Ingresos",
+        estados_cuenta: "Estados de Cuenta",
+        comprobante_domicilio: "Comprobante de Domicilio",
+        carta_recomendacion: "Carta de Recomendación Bancaria",
+        otros: "Otros Documentos"
+      };
+      docsUrlsStr = entries
+        .map(([key, url]) => `• ${labelsMap[key] || key}: ${url}`)
+        .join("\n");
     }
 
     // Registro de consentimiento (evidencia LFPDPPP): versión de documentos aceptada y fecha.

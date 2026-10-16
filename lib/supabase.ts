@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // CBF corre exclusivamente server-side. El anon key jamás sustituye la
 // credencial de servicio para contratos internos o datos multi-tenant.
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
