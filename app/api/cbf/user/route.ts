@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authMiddleware } from "@/lib/auth";
-import { sitePlatformConfig } from "@/lib/site-platform-config";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -54,7 +53,9 @@ export async function GET(request: NextRequest) {
         site: siteData
           ? {
               ...siteData,
-              platform_config: sitePlatformConfig(),
+              platform_config: {
+                mapbox_token: process.env.MAPBOX_ACCESS_TOKEN ?? null,
+              },
             }
           : null,
       },
