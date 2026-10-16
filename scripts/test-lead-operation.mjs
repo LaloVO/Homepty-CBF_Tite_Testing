@@ -64,6 +64,13 @@ test("el sitio recibe la operación publicada con el nombre del catálogo, o nul
   assert.deepEqual(filas.map((f) => f.operacion_publicada?.nombre ?? null), ["Inversión", null, null]);
 });
 
+test("HPY-206: el precio publicado lleva su periodo; una renta es mensual y una venta, precio total", () => {
+  const catalogo = [{ id: 1, nombre: "Compra-venta", codigo: "sale" }, { id: 2, nombre: "Renta", codigo: "rent" }];
+  const filas = conOperacionPublicada([{ id: 1, id_tipo_accion: 2 }, { id: 2, id_tipo_accion: 1 }, { id: 3, id_tipo_accion: null }, { id: 4, id_tipo_accion: "2" }], catalogo);
+  assert.deepEqual(filas.map((f) => f.precio_periodo), ["mensual", null, null, "mensual"],
+    "sin operación no se inventa periodo; el sitio no lo infiere por su cuenta");
+});
+
 test("la ruta guarda los tres datos, liga sólo propiedades del sitio y no liga la captación a una ficha", () => {
   const route = readFileSync(new URL("../app/api/cbf/leads/route.ts", import.meta.url), "utf8");
   assert.match(route, /id_accion_propiedad: operacion\.idAccionPropiedad,/);

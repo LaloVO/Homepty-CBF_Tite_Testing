@@ -85,10 +85,26 @@ export interface OperacionCatalogo { id: number; nombre: string | null; codigo: 
  * (`accionespropiedades`), para que los sitios no mantengan su propia copia de etiquetas. Sin fila
  * en el catálogo, `operacion_publicada` es `null`: el sitio dice «por confirmar», no inventa.
  */
+/** `accionespropiedades.id_accion_propiedad` de Renta en el catálogo de la Suite. */
+export const ACCION_RENTA = 2;
+
+/**
+ * HPY-206 — periodo del precio publicado. La Suite trata el `precio` de un listado en renta como
+ * mensual (`homepty_new/src/utils/property-price.ts`); cualquier otra operación publica un precio
+ * total (`null`). El sitio no lo infiere por su cuenta.
+ */
+export function periodoDelPrecio(idTipoAccion: number | null | undefined): "mensual" | null {
+  return idTipoAccion != null && Number(idTipoAccion) === ACCION_RENTA ? "mensual" : null;
+}
+
 export function conOperacionPublicada<T extends { id_tipo_accion?: number | null }>(
   filas: T[],
   catalogo: OperacionCatalogo[],
-): Array<T & { operacion_publicada: OperacionCatalogo | null }> {
+): Array<T & { operacion_publicada: OperacionCatalogo | null; precio_periodo: "mensual" | null }> {
   const porId = new Map(catalogo.map((c) => [c.id, c]));
-  return filas.map((f) => ({ ...f, operacion_publicada: f.id_tipo_accion != null ? porId.get(Number(f.id_tipo_accion)) ?? null : null }));
+  return filas.map((f) => ({
+    ...f,
+    operacion_publicada: f.id_tipo_accion != null ? porId.get(Number(f.id_tipo_accion)) ?? null : null,
+    precio_periodo: periodoDelPrecio(f.id_tipo_accion),
+  }));
 }
