@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authMiddleware } from "@/lib/auth";
+import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
+import { leerIdPropiedad, resolverOperacionDelLead } from "@/lib/lead-operation";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
       cita_virtual_solicitada,
       cita_virtual_fecha_hora,
       consent, // { version, acceptedAt } — aceptación del aviso de privacidad en el embudo
+      id_propiedad, // HPY-205: la propiedad o unidad seleccionada, si el lead nace de una ficha
     } = body;
 
     // Validar campos básicos indispensables
@@ -61,11 +63,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Mapear tipo_operacion ("compra" / "renta" -> "Comprar" / "Rentar")
-    const mappedTipoOperacion = tipo_operacion === "renta" ? "Rentar" : "Comprar";
+    // HPY-205 — La referencia del inmueble viaja al CRM. Sólo vale una propiedad del inventario
+    // de ESTE sitio (mismo alcance que GET /api/cbf/properties): un sitio no puede ligar su lead
+    // a la ficha de otro.
+    const idPropiedad = leerIdPropiedad(id_propiedad);
+    if (idPropiedad === null) {
+      return NextResponse.json({ error: "id_propiedad inválido" }, { status: 400 });
+    }
+    let propiedad: { id: number; id_tipo_accion: number | null } | null = null;
+    if (idPropiedad !== undefined) {
+      const { data, error } = await supabase
+        .from("propiedades")
+        .select("id, id_tipo_accion")
+        .eq("id", idPropiedad)
+        .in("id_usuario", await getInventoryUserIds(authResult))
+        .neq("status", "eliminado")
+        .maybeSingle();
+      if (error) {
+        return NextResponse.json({ error: "No se pudo verificar la propiedad" }, { status: 503 });
+      }
+      if (!data) {
+        return NextResponse.json({ error: "Propiedad no encontrada en el inventario de este sitio" }, { status: 404 });
+      }
+      propiedad = data;
+    }
+
+    // 2. Operación: la de la propiedad si el lead nace de una; si no, lo que el formulario
+    // puede decir (compra/renta). Aportación, Inversión o un valor nuevo ya no se vuelven
+    // "Comprar": `id_accion_propiedad` conserva la operación y el enum legacy sólo la proyecta.
+    const operacion = resolverOperacionDelLead({
+      conPropiedad: propiedad !== null,
+      idTipoAccionDePropiedad: propiedad?.id_tipo_accion,
+      tipoOperacionDelFormulario: tipo_operacion,
+    });
+    const mappedTipoOperacion = operacion.tipoOperacionLegacy;
     const siteIntent = lead_kind === "seller"
       ? "seller"
-      : tipo_operacion === "renta" || lead_kind === "renter" ? "renter" : "buyer";
+      : operacion.idAccionPropiedad === 2 || lead_kind === "renter" ? "renter" : "buyer";
 
     // 3. Mapear tipo_propiedad string a tipo_propiedad_id (número)
     const propertyTypeStr = String(tipo_propiedad || "").toLowerCase().trim();
@@ -216,6 +250,8 @@ CONSENTIMIENTO:
         correo_contacto: email.toLowerCase().trim(),
         telefono_contacto: telefono,
         tipo_operacion: mappedTipoOperacion,
+        id_accion_propiedad: operacion.idAccionPropiedad,
+        id_propiedad: propiedad?.id ?? null,
         tipo_propiedad_id: tipoPropiedadId,
         habitaciones: num_habitaciones ? parseInt(num_habitaciones) : null,
         banos: num_banos != null ? Math.round(parseFloat(num_banos)) : null,
@@ -267,6 +303,8 @@ CONSENTIMIENTO:
         entity_id: String(newLead.id),
         metadata: {
           tipo_operacion: mappedTipoOperacion,
+          id_accion_propiedad: operacion.idAccionPropiedad,
+          id_propiedad: propiedad?.id ?? null,
           source: "cbf_satellite_funnel",
           source_site_id: siteId,
           organization_id: organizationId,
