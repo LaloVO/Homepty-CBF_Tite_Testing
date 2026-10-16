@@ -2,41 +2,52 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { leerIdPropiedad, resolverOperacionDelLead } from "../lib/lead-operation.ts";
+import { conOperacionPublicada, leerIdPropiedad, resolverOperacionDelLead } from "../lib/lead-operation.ts";
 
 /*
  * HPY-205 — por qué importa:
  *
- * Este endpoint escribía "Comprar" para todo lo que no fuera "renta" y no guardaba de qué
- * propiedad nacía el lead. Una unidad en Aportación o Inversión llegaba al CRM como una compra
- * genérica, y el asesor no sabía sobre qué inmueble le escribían. La regla del ecosistema es que
- * la operación de la unidad no colapsa y que su referencia viaja con el lead. Si alguien vuelve a
- * derivar la operación del formulario cuando hay propiedad, o a convertir lo desconocido en
- * compra, esto falla.
+ * Este endpoint escribía "Comprar" para todo lo que no fuera "renta" y no guardaba de qué propiedad
+ * nacía el lead. Una unidad en Aportación o Inversión llegaba al CRM como una compra genérica, y el
+ * asesor no sabía sobre qué inmueble le escribían. El owner pide tres datos distinguibles: la unidad
+ * seleccionada, la operación que publica y la intención que declara el interesado. Si alguien vuelve
+ * a fundir cualquiera de los tres con otro, esto falla.
  */
 
-test("con propiedad, manda la operación de la propiedad aunque el formulario diga otra cosa", () => {
-  assert.deepEqual(
-    resolverOperacionDelLead({ conPropiedad: true, idTipoAccionDePropiedad: 7, tipoOperacionDelFormulario: "compra" }),
-    { idAccionPropiedad: 7, tipoOperacionLegacy: "Comprar" },
-  );
-  assert.deepEqual(
-    resolverOperacionDelLead({ conPropiedad: true, idTipoAccionDePropiedad: 2, tipoOperacionDelFormulario: "compra" }),
-    { idAccionPropiedad: 2, tipoOperacionLegacy: "Rentar" },
-  );
-  assert.equal(resolverOperacionDelLead({ conPropiedad: true, idTipoAccionDePropiedad: 5 }).idAccionPropiedad, 5);
+test("con inmueble, la operación publicada y la intención declarada quedan separadas", () => {
+  const r = resolverOperacionDelLead({ leadKind: "buyer", propiedad: { id_tipo_accion: 2 }, tipoOperacionDelFormulario: "compra" });
+  assert.deepEqual(r, { idAccionPropiedad: 2, idAccionPublicada: 2, intencionDeclarada: "compra", tipoOperacionLegacy: "Comprar", siteIntent: "buyer" },
+    "se anuncia en renta y el interesado quiere comprar: no se corrige ninguno de los dos");
+  assert.equal(resolverOperacionDelLead({ propiedad: { id_tipo_accion: 7 }, tipoOperacionDelFormulario: "renta" }).idAccionPublicada, 7,
+    "Inversión sigue siendo Inversión aunque la intención sea rentar");
+  assert.equal(resolverOperacionDelLead({ propiedad: { id_tipo_accion: 5 } }).idAccionPropiedad, 5, "Aportación no se vuelve compra");
+});
+
+test("sin intención declarada no se inventa una: site_intent queda null y el enum legacy sólo proyecta", () => {
+  for (const leadKind of ["buyer", "renter", undefined]) {
+    const r = resolverOperacionDelLead({ leadKind, propiedad: { id_tipo_accion: 2 } });
+    assert.equal(r.intencionDeclarada, null);
+    assert.equal(r.siteIntent, null, `lead_kind ${leadKind} no es una intención elegida por el interesado`);
+    assert.equal(r.tipoOperacionLegacy, "Rentar", "el enum legacy se proyecta como en la Suite (2 → Rentar)");
+  }
 });
 
 test("una propiedad sin operación queda desconocida, no se vuelve compra", () => {
-  assert.equal(resolverOperacionDelLead({ conPropiedad: true, idTipoAccionDePropiedad: null }).idAccionPropiedad, null);
+  assert.equal(resolverOperacionDelLead({ propiedad: { id_tipo_accion: null } }).idAccionPublicada, null);
 });
 
-test("sin propiedad, el formulario sólo puede decir compra o renta; lo demás queda desconocido", () => {
-  assert.equal(resolverOperacionDelLead({ conPropiedad: false, tipoOperacionDelFormulario: "compra" }).idAccionPropiedad, 1);
-  assert.equal(resolverOperacionDelLead({ conPropiedad: false, tipoOperacionDelFormulario: " Renta " }).idAccionPropiedad, 2);
+test("búsqueda general: sin inmueble, sólo vale lo que el interesado declaró", () => {
+  assert.equal(resolverOperacionDelLead({ tipoOperacionDelFormulario: "compra" }).idAccionPropiedad, 1);
+  const renta = resolverOperacionDelLead({ tipoOperacionDelFormulario: " Renta " });
+  assert.deepEqual([renta.idAccionPropiedad, renta.idAccionPublicada, renta.siteIntent], [2, null, "renter"]);
   for (const valor of ["inversion", "aportacion", undefined, 7]) {
-    assert.equal(resolverOperacionDelLead({ conPropiedad: false, tipoOperacionDelFormulario: valor }).idAccionPropiedad, null);
+    assert.equal(resolverOperacionDelLead({ tipoOperacionDelFormulario: valor }).idAccionPropiedad, null);
   }
+});
+
+test("la captación de propietarios es otro flujo: sin ficha, sin operación ni intención de compra", () => {
+  const r = resolverOperacionDelLead({ leadKind: "seller", tipoOperacionDelFormulario: "compra" });
+  assert.deepEqual([r.idAccionPropiedad, r.idAccionPublicada, r.intencionDeclarada, r.siteIntent], [null, null, null, "seller"]);
 });
 
 test("id_propiedad: ausente no es inválido, y un valor que no es id se rechaza", () => {
@@ -47,10 +58,20 @@ test("id_propiedad: ausente no es inválido, y un valor que no es id se rechaza"
   assert.equal(leerIdPropiedad("abc"), null);
 });
 
-test("la ruta guarda la operación y la propiedad, y sólo acepta propiedades del inventario del sitio", () => {
+test("el sitio recibe la operación publicada con el nombre del catálogo, o null; nunca «Venta» por omisión", () => {
+  const catalogo = [{ id: 1, nombre: "Compra-venta", codigo: "sale" }, { id: 7, nombre: "Inversión", codigo: "investment" }];
+  const filas = conOperacionPublicada([{ id: 1, id_tipo_accion: 7 }, { id: 2, id_tipo_accion: 9 }, { id: 3, id_tipo_accion: null }], catalogo);
+  assert.deepEqual(filas.map((f) => f.operacion_publicada?.nombre ?? null), ["Inversión", null, null]);
+});
+
+test("la ruta guarda los tres datos, liga sólo propiedades del sitio y no liga la captación a una ficha", () => {
   const route = readFileSync(new URL("../app/api/cbf/leads/route.ts", import.meta.url), "utf8");
   assert.match(route, /id_accion_propiedad: operacion\.idAccionPropiedad,/);
   assert.match(route, /id_propiedad: propiedad\?\.id \?\? null,/);
+  assert.match(route, /site_intent: siteIntent,/);
   assert.match(route, /\.in\("id_usuario", await getInventoryUserIds\(authResult\)\)/);
+  assert.match(route, /lead_kind === "seller" && idPropiedad !== undefined/);
+  assert.match(route, /if \(!enCatalogo\) propiedad = \{ \.\.\.data, id_tipo_accion: null \};/,
+    "una operación fuera del catálogo no tumba el insert (FK de solicitudes.id_accion_propiedad): el lead no se pierde");
   assert.doesNotMatch(route, /tipo_operacion === "renta" \? "Rentar" : "Comprar"/);
 });

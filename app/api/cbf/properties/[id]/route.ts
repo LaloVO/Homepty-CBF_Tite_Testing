@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
+import { conOperacionPublicada } from "@/lib/lead-operation";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -57,9 +58,14 @@ export async function GET(
       );
     }
 
+    // HPY-205 — La operación publicada con su nombre del catálogo (ver /api/cbf/properties).
+    const { data: catalogo } = await supabase
+      .from("accionespropiedades")
+      .select("id:id_accion_propiedad, nombre:nombre_accion_propiedad, codigo:operation_code");
+
     return NextResponse.json({
       success: true,
-      data,
+      data: conOperacionPublicada([data], catalogo || [])[0],
     });
   } catch (error) {
     console.error("Error inesperado:", error);

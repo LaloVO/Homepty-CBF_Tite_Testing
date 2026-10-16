@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
+import { conOperacionPublicada } from "@/lib/lead-operation";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -73,9 +74,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // HPY-205 — La operación publicada viaja con su nombre del catálogo: el sitio no mantiene su
+    // propia tabla de etiquetas (que hoy llamaba «Venta» a todo lo que no fuera 2 o 4).
+    const { data: catalogo } = await supabase
+      .from("accionespropiedades")
+      .select("id:id_accion_propiedad, nombre:nombre_accion_propiedad, codigo:operation_code");
+
     return NextResponse.json({
       success: true,
-      data: data || [],
+      data: conOperacionPublicada(data || [], catalogo || []),
       pagination: {
         limit,
         offset,

@@ -65,10 +65,16 @@ export async function POST(request: NextRequest) {
 
     // HPY-205 — La referencia del inmueble viaja al CRM. Sólo vale una propiedad del inventario
     // de ESTE sitio (mismo alcance que GET /api/cbf/properties): un sitio no puede ligar su lead
-    // a la ficha de otro.
+    // a la ficha de otro. La captación de propietarios es otro flujo: no nace de una ficha.
     const idPropiedad = leerIdPropiedad(id_propiedad);
     if (idPropiedad === null) {
       return NextResponse.json({ error: "id_propiedad inválido" }, { status: 400 });
+    }
+    if (lead_kind === "seller" && idPropiedad !== undefined) {
+      return NextResponse.json(
+        { error: "La captación de propietarios no se liga a una ficha publicada" },
+        { status: 400 }
+      );
     }
     let propiedad: { id: number; id_tipo_accion: number | null } | null = null;
     if (idPropiedad !== undefined) {
@@ -86,20 +92,33 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Propiedad no encontrada en el inventario de este sitio" }, { status: 404 });
       }
       propiedad = data;
+      // `solicitudes.id_accion_propiedad` tiene FK a `accionespropiedades`; `propiedades.id_tipo_accion`
+      // no. Una operación fuera del catálogo queda desconocida en vez de tumbar el insert y perder el lead.
+      if (data.id_tipo_accion != null) {
+        const { data: enCatalogo, error: catalogoError } = await supabase
+          .from("accionespropiedades")
+          .select("id_accion_propiedad")
+          .eq("id_accion_propiedad", data.id_tipo_accion)
+          .maybeSingle();
+        if (catalogoError) {
+          return NextResponse.json({ error: "No se pudo verificar la operación de la propiedad" }, { status: 503 });
+        }
+        if (!enCatalogo) propiedad = { ...data, id_tipo_accion: null };
+      }
     }
 
-    // 2. Operación: la de la propiedad si el lead nace de una; si no, lo que el formulario
-    // puede decir (compra/renta). Aportación, Inversión o un valor nuevo ya no se vuelven
-    // "Comprar": `id_accion_propiedad` conserva la operación y el enum legacy sólo la proyecta.
+    // 2. Tres datos que no se mezclan, cada uno en su columna: la unidad seleccionada
+    // (`id_propiedad`), la operación que esa unidad publica al momento del lead
+    // (`id_accion_propiedad`, sin colapsar Aportación ni Inversión a compra) y la intención que
+    // declaró el interesado (`site_intent`, y su proyección al enum legacy `tipo_operacion`). La
+    // Suite los muestra desde esas columnas. Ver lib/lead-operation.ts.
     const operacion = resolverOperacionDelLead({
-      conPropiedad: propiedad !== null,
-      idTipoAccionDePropiedad: propiedad?.id_tipo_accion,
+      leadKind: lead_kind,
+      propiedad,
       tipoOperacionDelFormulario: tipo_operacion,
     });
     const mappedTipoOperacion = operacion.tipoOperacionLegacy;
-    const siteIntent = lead_kind === "seller"
-      ? "seller"
-      : operacion.idAccionPropiedad === 2 || lead_kind === "renter" ? "renter" : "buyer";
+    const siteIntent = operacion.siteIntent;
 
     // 3. Mapear tipo_propiedad string a tipo_propiedad_id (número)
     const propertyTypeStr = String(tipo_propiedad || "").toLowerCase().trim();
@@ -305,6 +324,8 @@ CONSENTIMIENTO:
           tipo_operacion: mappedTipoOperacion,
           id_accion_propiedad: operacion.idAccionPropiedad,
           id_propiedad: propiedad?.id ?? null,
+          operacion_publicada: operacion.idAccionPublicada,
+          intencion_declarada: operacion.intencionDeclarada,
           source: "cbf_satellite_funnel",
           source_site_id: siteId,
           organization_id: organizationId,
