@@ -215,17 +215,87 @@ test("posts: sólo publicados y fuera de comunidades privadas; su propiedad, só
   }
 });
 
-test("/user: del asesor y del sitio sólo lo que el sitio muestra; nada interno ni la llave", () => {
+/** Columnas reales de `usuarios` (information_schema de la base de la Suite, 2026-10-21). */
+const COLUMNAS_DE_USUARIOS = [
+  "id", "fecha_creacion_usuario", "nombre_usuario", "telefono_usuario", "email_usuario", "imagen_perfil_usuario",
+  "banner_usuario", "descripcion_usuario", "estado_usuario", "actividad_usuario", "id_estado", "id_ciudad",
+  "updated_at", "actividades", "servicios", "como_trabaja", "onboarding_completado", "referred_by_partner_id",
+  "managed_by_org_id", "terminos_version", "terminos_aceptados_at", "subject_ref", "actividad_claves",
+  "mostrar_email_perfil", "mostrar_telefono_perfil",
+];
+
+/**
+ * Por qué importa (owner, 2026-10-21): «Los sitios y las cards id de los users dentro de la Suite SI O SI
+ * muestran la info que el user cargo en su perfil, esto incluye ubicacion, telefono e email». El sitio del
+ * asesor recibe siempre el perfil que cargó; ocultarlo por una preferencia fue un error de diseño. Si el
+ * perfil pierde una parte, o una preferencia vuelve a esconder el contacto, esto falla.
+ */
+const PERFIL_CARGADO = [
+  "id", "nombre_usuario", "imagen_perfil_usuario", "banner_usuario", "descripcion_usuario", "actividad_usuario",
+  "actividades", "actividad_claves", "servicios", "como_trabaja", "telefono_usuario", "email_usuario",
+  "id_estado", "id_ciudad",
+];
+/** El nombre del estado y de la ciudad, de sus catálogos (FK `usuarios_id_estado_fkey` y `usuarios_id_ciudad_fkey`). */
+const UBICACION_POR_NOMBRE = ["estados(nombre_estado)", "ciudades(nombre_ciudad)"];
+/** Lo que los sitios leen hoy de `/user` (CBF-Sites y la plantilla, análisis del 2026-10-21): sale igual. */
+const LEIDAS_DEL_ASESOR_POR_LOS_SITIOS = [
+  "nombre_usuario", "telefono_usuario", "email_usuario", "imagen_perfil_usuario", "actividad_usuario",
+];
+/** Lo interno de `usuarios`, que nunca sale con la llave pública, y por qué. */
+const INTERNAS_DE_USUARIOS = {
+  subject_ref: "identidad interna del sujeto",
+  managed_by_org_id: "la organización que lo administra",
+  referred_by_partner_id: "quién lo refirió",
+  terminos_version: "aceptación de términos", terminos_aceptados_at: "aceptación de términos",
+  onboarding_completado: "estado del onboarding",
+  estado_usuario: "estado de la cuenta",
+  mostrar_email_perfil: "preferencia que ya no oculta nada", mostrar_telefono_perfil: "preferencia que ya no oculta nada",
+  updated_at: "bitácora de la fila",
+};
+
+/** Las columnas de un `.select("…")` de la ruta; las comas dentro de un embed no separan. */
+function columnasDelSelect(fuente, tabla) {
+  const select = fuente.match(new RegExp(`from\\("${tabla}"\\)\\s*\\.select\\("([^"]+)"\\)`));
+  assert.ok(select, `${tabla} sin select explícito`);
+  return new Set(select[1].split(/,(?![^()]*\))/).map((c) => c.trim()));
+}
+
+test("/user: el sitio recibe siempre el perfil que el asesor cargó, con ubicación, teléfono y email", () => {
   const fuente = leer("app/api/cbf/user/route.ts");
-  const columnasDe = (tabla) => {
-    const select = fuente.match(new RegExp(`from\\("${tabla}"\\)\\s*\\.select\\("([^"]+)"\\)`));
-    assert.ok(select, `${tabla} sin select explícito`);
-    return new Set(select[1].split(",").map((c) => c.trim()));
-  };
-  assert.deepEqual(columnasDe("usuarios"), new Set([
-    "id", "nombre_usuario", "email_usuario", "telefono_usuario", "imagen_perfil_usuario", "actividad_usuario",
-  ]), "los sitios leen estas (WhatsApp, contacto, foto, actividad); subject_ref, términos u organización no salen");
-  assert.deepEqual(columnasDe("user_sites"), new Set(["site_name", "theme_config"]),
+  for (const columna of PERFIL_CARGADO) {
+    assert.ok(COLUMNAS_DE_USUARIOS.includes(columna), `${columna} no es columna de usuarios: PostgREST respondería 400 a todos los sitios`);
+  }
+  const usuarios = columnasDelSelect(fuente, "usuarios");
+  assert.deepEqual(usuarios, new Set([...PERFIL_CARGADO, ...UBICACION_POR_NOMBRE]), "el perfil que cargó, completo y nada más");
+  for (const columna of LEIDAS_DEL_ASESOR_POR_LOS_SITIOS) {
+    assert.ok(usuarios.has(columna), `los sitios leen ${columna} (nombre, WhatsApp, contacto, foto, actividad) con ese nombre`);
+  }
+  for (const columna of ["telefono_usuario", "email_usuario", "id_estado", "id_ciudad", ...UBICACION_POR_NOMBRE]) {
+    assert.ok(usuarios.has(columna), `${columna}: ubicación, teléfono y email salen siempre`);
+  }
+  assert.match(fuente, /const \{ estados, ciudades, \.\.\.perfil \} = userData;/, "todo lo seleccionado viaja tal cual");
+  assert.match(fuente, /estado: estados\?\.nombre_estado \?\? null/, "el nombre del estado sale plano, como en la tarjeta de la Suite");
+  assert.match(fuente, /ciudad: ciudades\?\.nombre_ciudad \?\? null/, "el nombre de la ciudad sale plano, como en la tarjeta de la Suite");
+  assert.match(fuente, /data: \{\s*user,/, "sale ese perfil, no la fila anidada");
+});
+
+test("/user: ninguna preferencia `mostrar_*_perfil` oculta el teléfono ni el email que el asesor cargó", () => {
+  const fuente = leer("app/api/cbf/user/route.ts");
+  assert.doesNotMatch(fuente, /mostrar_(email|telefono)_perfil/,
+    "los 10 dueños de sitio las tienen en false: esconderían el contacto (y el botón de WhatsApp) de todos los sitios");
+  assert.doesNotMatch(fuente, /\b(email|telefono)_usuario\s*:/, "nada reemplaza el contacto que cargó (por null u otro valor)");
+  assert.doesNotMatch(fuente, /delete\s+[\w.]+\.(email|telefono)_usuario/, "ni lo borra antes de responder");
+});
+
+test("/user: nada interno del asesor ni del sitio sale con la llave pública", () => {
+  const fuente = leer("app/api/cbf/user/route.ts");
+  const usuarios = columnasDelSelect(fuente, "usuarios");
+  assert.equal(usuarios.has("*"), false, "nunca select('*'): la fila trae lo interno");
+  for (const [columna, porque] of Object.entries(INTERNAS_DE_USUARIOS)) {
+    assert.ok(COLUMNAS_DE_USUARIOS.includes(columna), `${columna} no es columna de usuarios`);
+    assert.equal(usuarios.has(columna), false, `${columna}: ${porque}`);
+  }
+  assert.deepEqual(columnasDelSelect(fuente, "user_sites"), new Set(["site_name", "theme_config"]),
     "los sitios leen el nombre y el logo; Stripe, plan, orden, ciclo de vida o la llave no salen");
   assert.match(fuente, /platform_config: \{\s*mapbox_token:/, "el token de mapa lo arma CBF, no sale de la fila");
 });

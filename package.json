@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:site-runtime": "node --experimental-strip-types --test scripts/test-site-runtime-access.mjs scripts/test-cbf-auth-boundary.mjs scripts/test-lead-operation.mjs scripts/test-site-files.mjs scripts/test-seller-inquiry.mjs scripts/test-site-public-data.mjs"
+    "test:site-runtime": "node --experimental-strip-types --test scripts/test-site-runtime-access.mjs scripts/test-cbf-auth-boundary.mjs scripts/test-lead-operation.mjs scripts/test-site-files.mjs scripts/test-seller-inquiry.mjs scripts/test-site-public-data.mjs scripts/test-site-user-runtime.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
