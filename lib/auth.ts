@@ -32,6 +32,11 @@ async function hasActiveLegacyContract(siteId: string): Promise<boolean> {
 
 /**
  * Verifica que la API Key proporcionada sea válida
+ *
+ * La llave es pública por diseño (owner, 2026-10-21): los sitios son SPAs estáticas que llaman a
+ * CBF desde el navegador con ella en el bundle. Identifica al sitio, no prueba confianza; por eso
+ * lo que la acepta sólo entrega datos públicos (ver lib/property-publication.ts). Sacarla del
+ * navegador exige un proxy de servidor por sitio (fuera del alcance de CBF).
  * @param apiKey - CBF API Key del header Authorization
  * @returns userId si es válida, null si no lo es
  */

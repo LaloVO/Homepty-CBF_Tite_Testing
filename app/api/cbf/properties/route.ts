@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
 import { conOperacionPublicada } from "@/lib/lead-operation";
+import {
+  APPROVAL_GATE,
+  PUBLIC_STATUS,
+  SELECT_PROPIEDAD_PUBLICA,
+  proyectarPropiedadPublica,
+} from "@/lib/property-publication";
 import { supabase } from "@/lib/supabase";
 
 /**
  * GET /api/cbf/properties
- * Obtiene las propiedades del usuario autenticado
+ * Obtiene las propiedades publicadas del inventario del sitio, con sus columnas públicas
+ * (ver lib/property-publication.ts)
  * 
  * Headers requeridos:
  * - Authorization: Bearer <cbf_api_key>
@@ -16,7 +23,7 @@ import { supabase } from "@/lib/supabase";
  * - tipo: filtrar por tipo de propiedad
  * - id_tipo_accion: filtrar por tipo de acción (1=Venta, 2=Renta, etc.)
  * - is_unit: filtrar por unidades (true/false)
- * - parent_id: filtrar unidades hijas por desarrollo
+ * - parent_id: filtrar unidades hijas por desarrollo (también sólo las publicadas)
  */
 export async function GET(request: NextRequest) {
   // Autenticar la solicitud
@@ -37,12 +44,14 @@ export async function GET(request: NextRequest) {
     const isUnit = searchParams.get("is_unit");
     const parentId = searchParams.get("parent_id");
 
-    // Construir query
+    // Construir query. La llave del sitio es pública: sólo lo publicado, filtrado en la consulta
+    // para que el conteo y la paginación (los sitios paginan con `total`) sean los de lo publicado.
     let query = supabase
       .from("propiedades")
-      .select("*, imagenes_propiedades(*), amenidades_propiedades(*)", { count: "exact" })
+      .select(SELECT_PROPIEDAD_PUBLICA, { count: "exact" })
       .in("id_usuario", inventoryUserIds)
-      .neq("status", "eliminado")
+      .eq("status", PUBLIC_STATUS)
+      .or(APPROVAL_GATE)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -82,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: conOperacionPublicada(data || [], catalogo || []),
+      data: conOperacionPublicada((data || []).map(proyectarPropiedadPublica), catalogo || []),
       pagination: {
         limit,
         offset,

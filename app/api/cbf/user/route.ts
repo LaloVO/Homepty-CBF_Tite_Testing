@@ -19,10 +19,14 @@ export async function GET(request: NextRequest) {
   const { siteId, userId } = authResult;
 
   try {
+    // La llave del sitio es pública (ver lib/auth.ts): sólo sale lo que el sitio muestra. Del asesor,
+    // el nombre, la foto, la actividad y el contacto que publica en su propio sitio; del sitio, su nombre
+    // y su tema. Nada interno (Stripe, plan, orden, ciclo de vida, organización, referidos, la llave).
+
     // Obtener información del usuario
     const { data: userData, error: userError } = await supabase
       .from("usuarios")
-      .select("*")
+      .select("id, nombre_usuario, email_usuario, telefono_usuario, imagen_perfil_usuario, actividad_usuario")
       .eq("id", userId)
       .single();
 
@@ -37,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Obtener configuración del sitio
     const { data: siteData, error: siteError } = await supabase
       .from("user_sites")
-      .select("*")
+      .select("site_name, theme_config")
       .eq("id", siteId)
       .single();
 
