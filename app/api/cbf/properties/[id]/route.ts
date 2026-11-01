@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
 import { conOperacionPublicada } from "@/lib/lead-operation";
+import {
+  APPROVAL_GATE,
+  PUBLIC_STATUS,
+  SELECT_PROPIEDAD_PUBLICA,
+  proyectarPropiedadPublica,
+} from "@/lib/property-publication";
 import { supabase } from "@/lib/supabase";
 
 /**
  * GET /api/cbf/properties/[id]
- * Obtiene una propiedad específica por ID
+ * Obtiene una propiedad publicada por ID, con sus columnas públicas (ver lib/property-publication.ts).
+ * Una propiedad no publicada responde 404, igual que una que no existe.
  * 
  * Headers requeridos:
  * - Authorization: Bearer <cbf_api_key>
@@ -35,13 +42,14 @@ export async function GET(
       );
     }
 
-    // Obtener la propiedad con sus imágenes y amenidades
+    // Obtener la propiedad publicada con sus imágenes y amenidades
     const { data, error } = await supabase
       .from("propiedades")
-      .select("*, imagenes_propiedades(*), amenidades_propiedades(*)")
+      .select(SELECT_PROPIEDAD_PUBLICA)
       .eq("id", propertyId)
       .in("id_usuario", inventoryUserIds)
-      .neq("status", "eliminado")
+      .eq("status", PUBLIC_STATUS)
+      .or(APPROVAL_GATE)
       .single();
 
     if (error) {
@@ -65,7 +73,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: conOperacionPublicada([data], catalogo || [])[0],
+      data: conOperacionPublicada([proyectarPropiedadPublica(data)], catalogo || [])[0],
     });
   } catch (error) {
     console.error("Error inesperado:", error);
