@@ -1,4 +1,5 @@
 import { supabase, UserSite, ProjectIntake } from "./supabase";
+import { APPROVAL_GATE, PUBLIC_STATUS, SELECT_PROPIEDAD_PUBLICA } from "./property-publication";
 
 export async function createProjectIntake(
   payload: Omit<ProjectIntake, "id" | "created_at">,
@@ -125,11 +126,15 @@ export async function getSiteByDomain(domain: string) {
  */
 export async function getPropertiesByUser(userId: string, limit: number = 50) {
   try {
+    // Entrada 91: esta lista se pinta en el sitio público del asesor. Sólo lo publicado y con la proyección pública,
+    // como `/api/cbf/properties`: un borrador o una pausada nunca salen al público.
     const { data, error } = await supabase
       .from("propiedades")
-      .select("*, imagenes_propiedades(*)")
+      .select(SELECT_PROPIEDAD_PUBLICA)
       .eq("id_usuario", userId)
       .eq("is_unit", false) // Solo propiedades principales, no unidades
+      .eq("status", PUBLIC_STATUS)
+      .or(APPROVAL_GATE)
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -155,9 +160,11 @@ export async function getPropertyById(propertyId: number, userId: string) {
   try {
     const { data, error } = await supabase
       .from("propiedades")
-      .select("*, imagenes_propiedades(*), amenidades_propiedades(*)")
+      .select(SELECT_PROPIEDAD_PUBLICA)
       .eq("id", propertyId)
       .eq("id_usuario", userId)
+      .eq("status", PUBLIC_STATUS)
+      .or(APPROVAL_GATE)
       .single();
 
     if (error) {

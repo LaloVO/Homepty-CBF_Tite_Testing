@@ -1,5 +1,9 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { APPROVAL_GATE, PUBLIC_STATUS, SELECT_PROPIEDAD_PUBLICA } from '@/lib/property-publication';
+
+/** Lo que esta página lee de cada propiedad (columnas heredadas: si no vienen, no se pintan). */
+type PropiedadDelSitio = { id: number; titulo_propiedad?: string; descripcion_propiedad?: string; precio_propiedad?: number };
 
 interface SitePageProps {
   params: Promise<{ subdomain: string }>;
@@ -24,15 +28,18 @@ async function getSiteData(subdomain: string) {
   // Get properties for this user
   const { data: properties, error: propsError } = await supabase
     .from('propiedades')
-    .select('*')
+    .select(SELECT_PROPIEDAD_PUBLICA)
     .eq('id_usuario', site.user_id_supabase)
-    .eq('estado_propiedad', 'activa');
+    // Entrada 91: `estado_propiedad` es la columna vieja; la publicación vive en `status` (y la aprobación del owner).
+    .eq('status', PUBLIC_STATUS)
+    .or(APPROVAL_GATE);
 
   if (propsError) {
     console.error('Error fetching properties:', propsError);
   }
 
-  return { site, properties: properties || [] };
+  // La proyección pública es una cadena calculada: el cliente no infiere sus columnas.
+  return { site, properties: (properties || []) as unknown as PropiedadDelSitio[] };
 }
 
 export default async function SitePage({ params }: SitePageProps) {

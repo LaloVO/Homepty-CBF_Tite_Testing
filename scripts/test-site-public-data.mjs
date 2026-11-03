@@ -320,3 +320,16 @@ test("admin e internal no aceptan la llave del sitio", () => {
     assert.match(leer(ruta), /status: 410/, `${ruta}: retirada`);
   }
 });
+
+test("entrada 91: las lecturas del sitio fuera de la API tampoco pintan un borrador", () => {
+  // `PropertyGridV2` (bloque del constructor de sitios) y la página heredada de `/sites/[subdomain]` leían las
+  // propiedades del asesor sin filtrar el estado: un borrador o una pausada salían en su sitio público. Regla del owner:
+  // un borrador nunca le llega a otra persona. Las dos lecturas usan la misma política y la proyección pública.
+  const db = leer("lib/db.ts");
+  const lecturaDelGrid = db.slice(db.indexOf("export async function getPropertiesByUser"));
+  assert.match(lecturaDelGrid, /\.select\(SELECT_PROPIEDAD_PUBLICA\)[\s\S]*?\.eq\("status", PUBLIC_STATUS\)\s*\.or\(APPROVAL_GATE\)/);
+  const sitio = leer("src/app/sites/[subdomain]/page.tsx");
+  assert.match(sitio, /\.eq\('status', PUBLIC_STATUS\)\s*\.or\(APPROVAL_GATE\)/);
+  assert.doesNotMatch(sitio, /\.eq\('estado_propiedad'/);
+  assert.doesNotMatch(leer("app/components/PropertyGridV2.tsx"), /property\.direccion/);
+});

@@ -96,7 +96,7 @@ export default async function PropertyGridV2({
                     </span>
                   </div>
                   <div className="mt-3 pt-3 border-t text-sm text-gray-600">
-                    📍 {property.direccion}, {property.colonia || ''}
+                    📍 {[property.colonia, property.ciudad_nombre].filter(Boolean).join(', ')}
                   </div>
                 </div>
               </div>
