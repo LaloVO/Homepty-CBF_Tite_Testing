@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "./supabase";
+import { sitioDeCuentaViva } from "./site-owner";
 import {
   isLegacyGrantActive,
   resolveSiteRuntimeAccess,
@@ -74,6 +75,13 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
     });
 
     if (!access.allowed) {
+      console.error("Acceso CBF rechazado para sitio:", data.id);
+      return null;
+    }
+
+    // HPY-216 (owner, entradas 92 y 102): el sitio de una cuenta eliminada (desde su día 0, y después del 90) responde como una
+    // llave desconocida, con el mismo 401: ni su perfil, ni su inventario, ni una solicitud más. Restaurar la cuenta lo devuelve.
+    if (!(await sitioDeCuentaViva(data.user_id_supabase))) {
       console.error("Acceso CBF rechazado para sitio:", data.id);
       return null;
     }

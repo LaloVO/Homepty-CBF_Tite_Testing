@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { APPROVAL_GATE, PUBLIC_STATUS, SELECT_PROPIEDAD_PUBLICA } from '@/lib/property-publication';
+import { sitioDeCuentaViva } from '@/lib/site-owner';
 
 /** Lo que esta página lee de cada propiedad (columnas heredadas: si no vienen, no se pintan). */
 type PropiedadDelSitio = { id: number; titulo_propiedad?: string; descripcion_propiedad?: string; precio_propiedad?: number };
@@ -22,6 +23,12 @@ async function getSiteData(subdomain: string) {
 
   if (siteError || !site) {
     console.error('Site not found:', subdomain, siteError);
+    return null;
+  }
+
+  // HPY-216: el sitio de una cuenta eliminada no se pinta, como uno que no existe.
+  if (!(await sitioDeCuentaViva(site.user_id_supabase))) {
+    console.error('Site not found:', subdomain);
     return null;
   }
 
