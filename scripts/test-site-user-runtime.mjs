@@ -48,7 +48,10 @@ function harness(options = {}) {
       const table = query.pathname.split("/").at(-1);
       const select = query.searchParams.get("select");
       let data;
-      if (table === "usuarios") {
+      if (query.pathname.endsWith("/rpc/usuario_eliminado")) {
+        // HPY-216: el sitio pregunta si la cuenta de su dueño está eliminada (lib/site-owner.ts); esta no lo está.
+        data = false;
+      } else if (table === "usuarios") {
         if (options.userError) return new Response(JSON.stringify({ message: "fixture only", code: "PGRST116" }), { status: 406 });
         assert.equal(query.searchParams.get("id"), "eq.fixture-owner", "a site can only retrieve its authenticated owner");
         assert.equal(select.includes("*"), false, "a public site key must never retrieve an internal row");
@@ -71,7 +74,9 @@ function harness(options = {}) {
     } },
   });
   const access = loadModule("lib/site-runtime-access.ts", {});
-  const auth = loadModule("lib/auth.ts", { "next/server": { NextResponse }, "./supabase": { supabase: client }, "./site-runtime-access": access });
+  const owner = loadModule("lib/site-owner.ts", { "./supabase": { supabase: client } });
+  const auth = loadModule("lib/auth.ts", { "next/server": { NextResponse }, "./supabase": { supabase: client }, "./site-runtime-access": access,
+    "./site-owner": owner });
   const { GET } = loadModule("app/api/cbf/user/route.ts", {
     "next/server": { NextRequest, NextResponse }, "@/lib/auth": auth, "@/lib/supabase": { supabase: client },
   });
@@ -88,7 +93,7 @@ test("runtime /user: an active site gets the complete professional profile even 
   const { estados, ciudades, mostrar_email_perfil, mostrar_telefono_perfil, subject_ref, managed_by_org_id, estado_usuario, ...expected } = profile;
   assert.deepEqual(data.user, { ...expected, estado: estados.nombre_estado, ciudad: ciudades.nombre_ciudad });
   assert.deepEqual(data.site, { site_name: "Sitio de prueba", theme_config: { logo: null }, platform_config: { mapbox_token: "fixture-map-token" } });
-  assert.equal(api.requests.length, 3);
+  assert.equal(api.requests.length, 4);
 });
 
 test("runtime /user: missing location/contact remains null; no invented location or mandatory contact", async () => {
@@ -104,7 +109,7 @@ test("runtime /user: profile read errors do not fabricate an empty successful pr
   const response = await api.get();
   assert.equal(response.status, 500);
   assert.deepEqual(await response.json(), { error: "Error al obtener información del usuario" });
-  assert.equal(api.requests.length, 2);
+  assert.equal(api.requests.length, 3);
 });
 
 test("runtime /user: missing/malformed/placeholder keys never reach profile data", async () => {
