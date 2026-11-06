@@ -181,9 +181,15 @@ export function referenciasDeDocumentos(
 type ResultadoDeEscritura = PromiseLike<{ error: { code?: string } | null }>;
 
 /**
- * Guarda las referencias de la solicitud recién registrada. Si no se pueden guardar, la solicitud se deshace (sus referencias se van
- * con ella) y el sitio recibe el error para volver a mandarla: nunca queda una solicitud cuyos documentos estén fuera del estatuto.
- * Los logs sólo llevan códigos, nunca una URL.
+ * Guarda las referencias de la solicitud recién registrada. Si no se pueden guardar, borra la solicitud (sus referencias se van con
+ * ella en cascada) y el sitio recibe el error para volver a mandarla. Es una compensación, no una transacción: la solicitud y sus
+ * referencias son dos inserts separados y deshacer es un tercer paso, que no cubre estos casos:
+ * - el borrado falla: la solicitud se queda sin referencias (sus documentos, fuera del estatuto) y, si el sitio la vuelve a mandar,
+ *   queda duplicada;
+ * - la función muere entre los dos inserts (un timeout, una caída): lo mismo, y nadie intenta borrarla;
+ * - el insert de las referencias se guarda pero su respuesta se pierde: la solicitud se borra, la cascada se lleva sus referencias
+ *   sin pasar por el estatuto y sus archivos se quedan en `documentos-leads` sin registro, salvo que el sitio la vuelva a mandar.
+ * Si esta ruta suma escrituras, los dos inserts van en una sola RPC del rol de servicio. Los logs sólo llevan códigos, nunca una URL.
  */
 export async function guardarReferenciasDelLead(
   solicitudId: number,
