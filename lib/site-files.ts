@@ -149,3 +149,51 @@ export function leerDocumentosDelLead(valor: unknown, siteId: string): Documento
   }
   return { ok: true, documentos };
 }
+
+/**
+ * HPY-216 (estatuto de borrado de la Suite, enmienda del 2026-11-06) — lo que el estatuto necesita para extraer del día 30 al 90 y
+ * purgar el día 90 los documentos de una solicitud de un sitio. Antes sólo quedaban como enlaces en el texto de la solicitud
+ * (`detalles_adicionales`), que el estatuto no vuelve a leer: el día 90 del asesor la solicitud se iba y los archivos se quedaban.
+ *
+ * Una fila por documento en `solicitud_documentos_de_sitio`, una tabla que sólo escribe el servidor (con el cliente de servicio):
+ * el sitio del token, la casilla y la URL del objeto. Sólo los archivos que CBF dejó subir a ESTE sitio (`documentos`, rutas
+ * `sitios/<sitio>/<uuid>/<nombre>`): lo que los sitios de antes suben con la llave pública (`documentos_urls`, bajo
+ * `leads/<correo>/…`) no se puede atar al sitio que lo manda y no se registra como suyo (sigue en el texto, como antes). La Suite sólo
+ * lee o purga el archivo que va bajo el sitio de la fila.
+ */
+export type ReferenciaDeDocumento = { site_id: string; tipo_documento: string; file_url: string };
+
+/** La referencia de cada documento del lead que es de este sitio. Una ruta que no lo es no se registra como suya. */
+export function referenciasDeDocumentos(
+  supabaseUrl: string,
+  siteId: string,
+  documentos: ReadonlyArray<{ clave: string; ruta: string }>,
+): ReferenciaDeDocumento[] {
+  return documentos
+    .filter((d) => esRutaDelSitio(d.ruta, siteId))
+    .map((d) => ({ site_id: siteId, tipo_documento: d.clave, file_url: referenciaDelArchivo(supabaseUrl, "documentos-leads", d.ruta) }));
+}
+
+type ResultadoDeEscritura = PromiseLike<{ error: { code?: string } | null }>;
+
+/**
+ * Guarda las referencias de la solicitud recién registrada. Si no se pueden guardar, la solicitud se deshace (sus referencias se van
+ * con ella) y el sitio recibe el error para volver a mandarla: nunca queda una solicitud cuyos documentos estén fuera del estatuto.
+ * Los logs sólo llevan códigos, nunca una URL.
+ */
+export async function guardarReferenciasDelLead(
+  solicitudId: number,
+  referencias: ReadonlyArray<ReferenciaDeDocumento>,
+  base: {
+    insertarReferencias(filas: Array<ReferenciaDeDocumento & { solicitud_id: number }>): ResultadoDeEscritura;
+    borrarSolicitud(id: number): ResultadoDeEscritura;
+  },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!referencias.length) return { ok: true };
+  const { error } = await base.insertarReferencias(referencias.map((r) => ({ solicitud_id: solicitudId, ...r })));
+  if (!error) return { ok: true };
+  console.error("[CBF/leads] No se pudieron guardar las referencias de los documentos — code:", error.code);
+  const { error: deshacer } = await base.borrarSolicitud(solicitudId);
+  if (deshacer) console.error("[CBF/leads] No se pudo deshacer la solicitud", solicitudId, deshacer.code);
+  return { ok: false, error: "No fue posible registrar los documentos de la solicitud: vuelve a enviarla" };
+}
