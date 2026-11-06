@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authMiddleware, getInventoryUserIds } from "@/lib/auth";
 import { leerIdPropiedad, resolverOperacionDelLead } from "@/lib/lead-operation";
-import { apuntaARutaDeSitio, leerDocumentosDelLead, referenciaDelArchivo } from "@/lib/site-files";
+import { apuntaARutaDeSitio, guardarReferenciasDelLead, leerDocumentosDelLead, referenciaDelArchivo, referenciasDeDocumentos } from "@/lib/site-files";
 import { verificarArchivosSubidos } from "@/lib/site-files-server";
 import { supabase, supabaseUrl } from "@/lib/supabase";
 
@@ -321,6 +321,21 @@ CONSENTIMIENTO:
         { error: "Error al registrar la solicitud en la base de datos central: " + insertError.message },
         { status: 500 }
       );
+    }
+
+    // HPY-216 — la referencia de cada documento de este sitio, en la tabla que sólo escribe el servidor y que el estatuto de borrado
+    // de la Suite registra (extracción del día 30 al 90, purga el día 90). Si no se puede guardar, la solicitud se deshace y el sitio
+    // la vuelve a mandar. Ver lib/site-files.ts.
+    const guardadas = await guardarReferenciasDelLead(
+      newLead.id,
+      referenciasDeDocumentos(supabaseUrl, siteId, documentosSubidos.documentos),
+      {
+        insertarReferencias: (filas) => supabase.from("solicitud_documentos_de_sitio").insert(filas),
+        borrarSolicitud: (id) => supabase.from("solicitudes").delete().eq("id", id),
+      }
+    );
+    if (!guardadas.ok) {
+      return NextResponse.json({ error: guardadas.error }, { status: 500 });
     }
 
     // 7. Insertar notificación para alertas en tiempo real en el CRM (omitir en modo demo)

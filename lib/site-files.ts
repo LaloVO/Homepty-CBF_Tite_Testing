@@ -149,3 +149,61 @@ export function leerDocumentosDelLead(valor: unknown, siteId: string): Documento
   }
   return { ok: true, documentos };
 }
+
+/**
+ * HPY-216 (estatuto de borrado de la Suite, enmienda del 2026-11-06) — lo que el estatuto necesita para extraer del día 30 al 90 y
+ * purgar el día 90 los documentos de una solicitud de un sitio. Antes sólo quedaban como enlaces en el texto de la solicitud
+ * (`detalles_adicionales`), que el estatuto no vuelve a leer: el día 90 del asesor la solicitud se iba y los archivos se quedaban.
+ *
+ * Una fila por documento en `solicitud_documentos_de_sitio`, una tabla que sólo escribe el servidor (con el cliente de servicio):
+ * el sitio del token, la casilla y la URL del objeto. Entra cualquier objeto de `documentos-leads` bajo el prefijo de ESTE sitio
+ * (`documentos`, rutas `sitios/<sitio>/<uuid>/<nombre>` que existen), no sólo los que CBF emitió: las políticas de INSERT y SELECT
+ * para anon del bucket dejan que cualquiera con la llave pública del sitio (va en su bundle) plante objetos bajo ese prefijo, o liste
+ * los que hay y cuelgue en una solicitud suya el de otra solicitud del mismo sitio; CBF sólo revisa la forma de la ruta y que el
+ * objeto exista. Lo que sí se cumple: la Suite sólo lee o purga el archivo que va bajo el sitio de la fila, nunca el de otro sitio, y
+ * mientras una referencia viva lo nombre la purga no lo borra por otro registro. Lo que los sitios de antes suben con la llave
+ * pública (`documentos_urls`, bajo `leads/<correo>/…`) no se puede atar al sitio que lo manda y no se registra como suyo (sigue en el
+ * texto, como antes).
+ */
+export type ReferenciaDeDocumento = { site_id: string; tipo_documento: string; file_url: string };
+
+/** La referencia de cada documento del lead que es de este sitio. Una ruta que no lo es no se registra como suya. */
+export function referenciasDeDocumentos(
+  supabaseUrl: string,
+  siteId: string,
+  documentos: ReadonlyArray<{ clave: string; ruta: string }>,
+): ReferenciaDeDocumento[] {
+  return documentos
+    .filter((d) => esRutaDelSitio(d.ruta, siteId))
+    .map((d) => ({ site_id: siteId, tipo_documento: d.clave, file_url: referenciaDelArchivo(supabaseUrl, "documentos-leads", d.ruta) }));
+}
+
+type ResultadoDeEscritura = PromiseLike<{ error: { code?: string } | null }>;
+
+/**
+ * Guarda las referencias de la solicitud recién registrada. Si no se pueden guardar, borra la solicitud (sus referencias se van con
+ * ella en cascada) y el sitio recibe el error para volver a mandarla. Es una compensación, no una transacción: la solicitud y sus
+ * referencias son dos inserts separados y deshacer es un tercer paso, que no cubre estos casos:
+ * - el borrado falla: la solicitud se queda sin referencias (sus documentos, fuera del estatuto) y, si el sitio la vuelve a mandar,
+ *   queda duplicada;
+ * - la función muere entre los dos inserts (un timeout, una caída): lo mismo, y nadie intenta borrarla;
+ * - el insert de las referencias se guarda pero su respuesta se pierde: la solicitud se borra, la cascada se lleva sus referencias
+ *   sin pasar por el estatuto y sus archivos se quedan en `documentos-leads` sin registro, salvo que el sitio la vuelva a mandar.
+ * Si esta ruta suma escrituras, los dos inserts van en una sola RPC del rol de servicio. Los logs sólo llevan códigos, nunca una URL.
+ */
+export async function guardarReferenciasDelLead(
+  solicitudId: number,
+  referencias: ReadonlyArray<ReferenciaDeDocumento>,
+  base: {
+    insertarReferencias(filas: Array<ReferenciaDeDocumento & { solicitud_id: number }>): ResultadoDeEscritura;
+    borrarSolicitud(id: number): ResultadoDeEscritura;
+  },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!referencias.length) return { ok: true };
+  const { error } = await base.insertarReferencias(referencias.map((r) => ({ solicitud_id: solicitudId, ...r })));
+  if (!error) return { ok: true };
+  console.error("[CBF/leads] No se pudieron guardar las referencias de los documentos — code:", error.code);
+  const { error: deshacer } = await base.borrarSolicitud(solicitudId);
+  if (deshacer) console.error("[CBF/leads] No se pudo deshacer la solicitud", solicitudId, deshacer.code);
+  return { ok: false, error: "No fue posible registrar los documentos de la solicitud: vuelve a enviarla" };
+}

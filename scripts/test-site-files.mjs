@@ -4,10 +4,12 @@ import test from "node:test";
 import {
   apuntaARutaDeSitio,
   esRutaDelSitio,
+  guardarReferenciasDelLead,
   leerDocumentosDelLead,
   leerPedidoDeSubida,
   nombreSeguro,
   referenciaDelArchivo,
+  referenciasDeDocumentos,
   rutaNueva,
 } from "../lib/site-files.ts";
 
@@ -104,4 +106,74 @@ test("por documentos_urls (sitios anteriores) no se cuela un archivo emitido por
     "las URLs que suben los sitios anteriores siguen entrando como antes");
   assert.equal(apuntaARutaDeSitio("https://homepty-prod-documentos-leads.s3.us-east-1.amazonaws.com/leads/a.pdf", proyecto), false);
   assert.equal(apuntaARutaDeSitio(42, proyecto), false);
+});
+
+/*
+ * HPY-216 (estatuto de borrado de la Suite, enmienda del 2026-11-06). Por qué importa: los documentos que un lead manda por un sitio
+ * (su INE, sus comprobantes) sólo quedaban como enlaces en el texto de la solicitud, que el estatuto no vuelve a leer: el día 90 del
+ * asesor la solicitud se iba y los archivos se quedaban para siempre. Ahora CBF guarda una referencia por documento en una tabla que
+ * sólo escribe el servidor, y el estatuto la extrae del día 30 al 90 y la purga el día 90. Si una de estas pruebas falla, un documento
+ * de este sitio se queda fuera del estatuto, o la referencia de un sitio nombra un archivo de otro (y el estatuto lo leería o lo
+ * borraría porque este sitio lo mandó).
+ */
+
+test("referencias: sólo los archivos que CBF dejó subir a ESTE sitio, con la URL que lee la Suite", () => {
+  const proyecto = "https://ref.supabase.co";
+  const ine = rutaNueva(SITIO, "INE frente.pdf", UUID);
+  assert.deepEqual(referenciasDeDocumentos(proyecto, SITIO, [{ clave: "identificacion", ruta: ine }]), [{
+    site_id: SITIO,
+    tipo_documento: "identificacion",
+    file_url: `${proyecto}/storage/v1/object/public/documentos-leads/sitios/${SITIO}/${UUID}/INE_frente.pdf`,
+  }], "el sitio del token, la casilla y el objeto en documentos-leads");
+  assert.deepEqual(referenciasDeDocumentos(proyecto, SITIO, [{ clave: "identificacion", ruta: rutaNueva(OTRO_SITIO, "ine.pdf", UUID) }]), [],
+    "el archivo de otro sitio nunca queda como de este");
+  for (const ruta of [
+    "leads/ana_x_mx/identificacion/1730000000000_ine.pdf", // lo que los sitios de antes suben con la llave pública
+    `${proyecto}/storage/v1/object/public/documentos-leads/leads/ana_x_mx/identificacion/1_ine.pdf`,
+    `${proyecto}/storage/v1/object/public/documentos-leads/sitios/${SITIO}/${UUID}/ine.pdf`, // una URL no es una ruta emitida
+    `sitios/${SITIO}/${UUID}/../ine.pdf`,
+  ]) {
+    assert.deepEqual(referenciasDeDocumentos(proyecto, SITIO, [{ clave: "identificacion", ruta }]), [], `no se ata al sitio: ${ruta}`);
+  }
+  assert.deepEqual(referenciasDeDocumentos(proyecto, SITIO, []), [], "sin documentos, sin referencias");
+});
+
+test("referencias: se guardan con su solicitud; si no se pueden guardar, la solicitud se deshace y el sitio la vuelve a mandar", async () => {
+  const proyecto = "https://ref.supabase.co";
+  const referencias = referenciasDeDocumentos(proyecto, SITIO, [
+    { clave: "identificacion", ruta: rutaNueva(SITIO, "ine.pdf", UUID) },
+    { clave: "comprobante_ingresos", ruta: rutaNueva(SITIO, "nomina.png", "1f8fad5b-d9cb-469f-a165-70867728950e") },
+  ]);
+  const baseFalsa = (errorAlInsertar = null, errorAlBorrar = null) => {
+    const llamadas = [];
+    return {
+      llamadas,
+      insertarReferencias: async (filas) => { llamadas.push(["insertar", filas]); return { error: errorAlInsertar }; },
+      borrarSolicitud: async (id) => { llamadas.push(["borrar", id]); return { error: errorAlBorrar }; },
+    };
+  };
+  const errores = [];
+  const consola = console.error;
+  console.error = (...args) => errores.push(args.map(String).join(" "));
+  try {
+    const bien = baseFalsa();
+    assert.deepEqual(await guardarReferenciasDelLead(41, referencias, bien), { ok: true });
+    assert.deepEqual(bien.llamadas, [["insertar", referencias.map((r) => ({ solicitud_id: 41, ...r }))]], "cada referencia, con su solicitud");
+
+    const sinDocumentos = baseFalsa();
+    assert.deepEqual(await guardarReferenciasDelLead(42, [], sinDocumentos), { ok: true });
+    assert.deepEqual(sinDocumentos.llamadas, [], "una solicitud sin documentos no escribe nada más");
+
+    const falla = baseFalsa({ code: "42P01" });
+    const r = await guardarReferenciasDelLead(43, referencias, falla);
+    assert.equal(r.ok, false);
+    assert.deepEqual(falla.llamadas.map(([que, valor]) => que === "borrar" ? [que, valor] : [que]), [["insertar"], ["borrar", 43]],
+      "nunca queda una solicitud con documentos fuera del estatuto");
+
+    const fallaTodo = baseFalsa({ code: "57014" }, { code: "57014" });
+    assert.equal((await guardarReferenciasDelLead(44, referencias, fallaTodo)).ok, false, "aunque deshacerla falle, el sitio recibe el error");
+  } finally {
+    console.error = consola;
+  }
+  assert.ok(errores.length >= 3 && errores.every((e) => !e.includes("storage/") && !e.includes("sitios/")), "los logs sólo llevan códigos");
 });
