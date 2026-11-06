@@ -51,9 +51,10 @@ const PROFILE = { id: OWNER, nombre_usuario: "Beto Bravo", email_usuario: "beto@
  * La base vista por CBF. `cuenta`: `viva`, `programada` (día 0 a 89), `anonimizada` (después del 90), `restaurada` (su fila de
  * `cuentas_en_eliminacion` se borró) o `sin_respuesta` (la base no contesta). Anota cada petición y cada escritura.
  */
-function base({ cuenta = "viva" } = {}) {
+function base({ cuenta = "viva", sitio = {}, contrato = true } = {}) {
   const requests = [];
   const writes = [];
+  let respondidas = 0;
   const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
   const noEncontrado = () => json({ code: "PGRST116", message: "fixture: 0 rows" }, 406);
   const client = createClient("https://fixture.invalid", "fixture-service-key", {
@@ -62,7 +63,9 @@ function base({ cuenta = "viva" } = {}) {
       const query = new URL(url);
       const method = (init.method ?? "GET").toUpperCase();
       const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
-      requests.push({ path: query.pathname, method, params: Object.fromEntries(query.searchParams), body });
+      requests.push({ path: query.pathname, method, params: Object.fromEntries(query.searchParams), body, nivel: respondidas });
+      await new Promise((r) => setTimeout(r, 1));
+      respondidas += 1;
       const table = query.pathname.split("/").at(-1);
       if (query.pathname.endsWith("/rpc/usuario_eliminado")) {
         if (cuenta === "sin_respuesta") return json({ code: "57014", message: "fixture: canceling statement" }, 500);
@@ -78,10 +81,10 @@ function base({ cuenta = "viva" } = {}) {
           || p.get("subdomain") === `eq.${SITE.subdomain}` || p.get("id") === `eq.${SITE.id}`;
         if (!coincide) return noEncontrado();
         if (p.get("id") === `eq.${SITE.id}`) return json({ site_name: SITE.site_name, theme_config: SITE.theme_config });
-        return json(SITE);
+        return json({ ...SITE, ...sitio });
       }
       if (table === "commercial_entitlement_grants") {
-        return json(p.get("site_id") === `eq.${SITE.id}` ? [{ valid_from: "2026-08-13T00:00:00Z", valid_until: null, revoked_at: null }] : []);
+        return json(contrato && p.get("site_id") === `eq.${SITE.id}` ? [{ valid_from: "2026-08-13T00:00:00Z", valid_until: null, revoked_at: null }] : []);
       }
       if (table === "usuarios") return p.get("id") === `eq.${OWNER}` ? json(PROFILE) : noEncontrado();
       if (table === "propiedades") return json([]);
@@ -188,6 +191,33 @@ test("la página raíz por dominio y la del subdominio no pintan el sitio de una
   }
   assert.equal(await cbf({ cuenta: "viva" }).porDominio("nadie.mx"), null);
   assert.equal(await cbf({ cuenta: "viva" }).pintar("nadie"), "no encontrada");
+});
+
+test("un rechazo de una llave que nombra un sitio tarda los mismos viajes a la base sea cual sea el motivo: apagado, suspendido, sin contrato o de una cuenta eliminada", async () => {
+  // El 401 y su cuerpo ya son los mismos. Si el número de viajes seguidos a la base (y con él el tiempo de la respuesta) dependiera
+  // del motivo, la llave pública de un sitio, que viaja en su bundle, diría si su asesor eliminó su cuenta o sólo se apagó su sitio.
+  // `nivel` es cuántas respuestas habían vuelto cuando salió cada petición: dos peticiones a la vez comparten nivel.
+  const viajes = [];
+  for (const estado of [{ sitio: { is_active: false } }, { sitio: { lifecycle_status: "suspended" } }, { contrato: false },
+    { sitio: { lifecycle_status: "active" }, cuenta: "programada" }, { cuenta: "programada" }, { cuenta: "anonimizada" },
+    { cuenta: "sin_respuesta" }]) {
+    const s = cbf(estado);
+    const res = await s.pedir();
+    assert.equal(res.status, 401, JSON.stringify(estado));
+    viajes.push(Math.max(...s.requests.map((r) => r.nivel)) + 1);
+  }
+  assert.deepEqual(viajes, Array(viajes.length).fill(2), String(viajes));
+});
+
+test("la visita que no se registra tarda lo mismo con el sitio apagado que con su cuenta eliminada", async () => {
+  const viajes = [];
+  for (const estado of [{ sitio: { is_active: false } }, { cuenta: "programada" }, { cuenta: "anonimizada" }]) {
+    const s = cbf(estado);
+    await s.visitar();
+    assert.deepEqual(s.writes, [], JSON.stringify(estado));
+    viajes.push(Math.max(...s.requests.map((r) => r.nivel)) + 1);
+  }
+  assert.deepEqual(viajes, [2, 2, 2], String(viajes));
 });
 
 // Lo que lee `user_sites` en CBF, y por qué cada lector deja o no deja pasar el sitio de una cuenta eliminada. Un lector nuevo tiene que
