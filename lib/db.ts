@@ -1,5 +1,6 @@
 import { supabase, UserSite, ProjectIntake } from "./supabase";
 import { APPROVAL_GATE, PUBLIC_STATUS, SELECT_PROPIEDAD_PUBLICA } from "./property-publication";
+import { sitioDeCuentaViva } from "./site-owner";
 
 export async function createProjectIntake(
   payload: Omit<ProjectIntake, "id" | "created_at">,
@@ -52,6 +53,12 @@ export async function getSiteByDomain(domain: string) {
     }
 
     const siteConfig = data as UserSite;
+
+    // HPY-216: el sitio de una cuenta eliminada no se pinta; la página dice lo mismo que de un dominio que no existe.
+    if (!(await sitioDeCuentaViva(siteConfig.user_id_supabase))) {
+      console.error("Sitio no encontrado para dominio:", domain);
+      return null;
+    }
 
     // Retornar configuración en el formato esperado por el PageRenderer
     return {

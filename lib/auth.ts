@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "./supabase";
+import { sitioDeCuentaViva } from "./site-owner";
 import {
   isLegacyGrantActive,
   resolveSiteRuntimeAccess,
@@ -65,15 +66,18 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
 
     const lifecycleStatus = (data.lifecycle_status ?? null) as SiteLifecycleStatus;
     const needsLegacyResolution = data.is_active && lifecycleStatus === "pending";
-    const access = resolveSiteRuntimeAccess({
-      isActive: data.is_active,
-      lifecycleStatus,
-      hasActiveLegacyGrant: needsLegacyResolution
-        ? await hasActiveLegacyContract(data.id)
-        : false,
-    });
+    // HPY-216 (owner, entradas 92 y 102): el sitio de una cuenta eliminada (desde su día 0, y después del 90) responde como una
+    // llave desconocida, con el mismo 401: ni su perfil, ni su inventario, ni una solicitud más. Restaurar la cuenta lo devuelve.
+    // Si su cuenta está eliminada se pregunta para toda llave que nombra un sitio, a la vez que su contrato heredado (cuando lo
+    // necesita): un rechazo tarda dos viajes a la base con el sitio apagado, sin contrato o de una cuenta eliminada, así que su tiempo
+    // no dice cuál (el estado y el cuerpo ya son los mismos).
+    const [hasActiveLegacyGrant, ownerAlive] = await Promise.all([
+      needsLegacyResolution ? hasActiveLegacyContract(data.id) : Promise.resolve(false),
+      sitioDeCuentaViva(data.user_id_supabase),
+    ]);
+    const access = resolveSiteRuntimeAccess({ isActive: data.is_active, lifecycleStatus, hasActiveLegacyGrant });
 
-    if (!access.allowed) {
+    if (!access.allowed || !ownerAlive) {
       console.error("Acceso CBF rechazado para sitio:", data.id);
       return null;
     }

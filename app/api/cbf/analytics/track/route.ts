@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { sitioDeCuentaViva } from "@/lib/site-owner";
 
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -15,11 +16,14 @@ export async function POST(request: NextRequest) {
 
   const { data: site } = await supabase
     .from("user_sites")
-    .select("id, is_active")
+    .select("id, is_active, user_id_supabase")
     .eq("cbf_api_key", key)
     .single();
 
-  if (!site || !site.is_active) {
+  // HPY-216: la visita al sitio de una cuenta eliminada no se registra, igual que la de una llave desconocida. La cuenta se pregunta
+  // también para un sitio apagado: no registrar una visita tarda lo mismo con el sitio apagado que con su cuenta eliminada.
+  const cuentaViva = site ? await sitioDeCuentaViva(site.user_id_supabase) : false;
+  if (!site || !site.is_active || !cuentaViva) {
     return new NextResponse(null, { status: 200 });
   }
 
