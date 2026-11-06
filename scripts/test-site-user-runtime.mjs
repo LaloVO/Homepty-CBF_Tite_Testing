@@ -123,6 +123,7 @@ test("runtime /user: missing/malformed/placeholder keys never reach profile data
 test("runtime /user: publication of professional contacts preserves suspension gates", async () => {
   const api = harness({ suspended: true });
   assert.equal((await api.get()).status, 401);
-  assert.equal(api.requests.length, 1);
+  // HPY-216: la cuenta del sitio se pregunta para toda llave que nombra un sitio, también uno suspendido (lib/auth.ts).
+  assert.equal(api.requests.length, 2);
   assert.equal(api.requests.some((request) => request.pathname.endsWith("/usuarios")), false);
 });

@@ -20,8 +20,10 @@ export async function POST(request: NextRequest) {
     .eq("cbf_api_key", key)
     .single();
 
-  // HPY-216: la visita al sitio de una cuenta eliminada no se registra, igual que la de una llave desconocida.
-  if (!site || !site.is_active || !(await sitioDeCuentaViva(site.user_id_supabase))) {
+  // HPY-216: la visita al sitio de una cuenta eliminada no se registra, igual que la de una llave desconocida. La cuenta se pregunta
+  // también para un sitio apagado: no registrar una visita tarda lo mismo con el sitio apagado que con su cuenta eliminada.
+  const cuentaViva = site ? await sitioDeCuentaViva(site.user_id_supabase) : false;
+  if (!site || !site.is_active || !cuentaViva) {
     return new NextResponse(null, { status: 200 });
   }
 
