@@ -156,10 +156,14 @@ export function leerDocumentosDelLead(valor: unknown, siteId: string): Documento
  * (`detalles_adicionales`), que el estatuto no vuelve a leer: el día 90 del asesor la solicitud se iba y los archivos se quedaban.
  *
  * Una fila por documento en `solicitud_documentos_de_sitio`, una tabla que sólo escribe el servidor (con el cliente de servicio):
- * el sitio del token, la casilla y la URL del objeto. Sólo los archivos que CBF dejó subir a ESTE sitio (`documentos`, rutas
- * `sitios/<sitio>/<uuid>/<nombre>`): lo que los sitios de antes suben con la llave pública (`documentos_urls`, bajo
- * `leads/<correo>/…`) no se puede atar al sitio que lo manda y no se registra como suyo (sigue en el texto, como antes). La Suite sólo
- * lee o purga el archivo que va bajo el sitio de la fila.
+ * el sitio del token, la casilla y la URL del objeto. Entra cualquier objeto de `documentos-leads` bajo el prefijo de ESTE sitio
+ * (`documentos`, rutas `sitios/<sitio>/<uuid>/<nombre>` que existen), no sólo los que CBF emitió: las políticas de INSERT y SELECT
+ * para anon del bucket dejan que cualquiera con la llave pública del sitio (va en su bundle) plante objetos bajo ese prefijo, o liste
+ * los que hay y cuelgue en una solicitud suya el de otra solicitud del mismo sitio; CBF sólo revisa la forma de la ruta y que el
+ * objeto exista. Lo que sí se cumple: la Suite sólo lee o purga el archivo que va bajo el sitio de la fila, nunca el de otro sitio, y
+ * mientras una referencia viva lo nombre la purga no lo borra por otro registro. Lo que los sitios de antes suben con la llave
+ * pública (`documentos_urls`, bajo `leads/<correo>/…`) no se puede atar al sitio que lo manda y no se registra como suyo (sigue en el
+ * texto, como antes).
  */
 export type ReferenciaDeDocumento = { site_id: string; tipo_documento: string; file_url: string };
 
