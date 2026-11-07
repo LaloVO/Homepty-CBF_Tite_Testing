@@ -6,6 +6,7 @@ import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
 
 // HPY-216 (owner, entradas 92 y 102): «las cuentas también deben respetar el estatuto de borrado». Desde el día 0 de una cuenta (y
 // para siempre después del 90) su sitio no se sirve: CBF le responde como a una llave desconocida, no registra sus visitas y no lo
@@ -36,6 +37,9 @@ function loadModule(relativePath, dependencies) {
 
 const OWNER = "00000000-0000-4000-8000-00000000000b";
 const KEY = "cbf_live_fixture_beto";
+// La llave se busca por su sha256 en `site_api_keys` (Suite, 20261107120000), con su sitio embebido (lib/site-keys.ts).
+const KEY_ID = "00000000-0000-4000-8000-00000000c1a0";
+const huella = (llave) => createHash("sha256").update(llave).digest("hex");
 // Como los 11 sitios de producción (2026-11-06): pendientes, activos y admitidos por su contrato heredado.
 const SITE = {
   id: "00000000-0000-4000-8000-0000000051b0", user_id_supabase: OWNER, organization_id: null, is_active: true,
@@ -76,8 +80,12 @@ function base({ cuenta = "viva", sitio = {}, contrato = true } = {}) {
         return new Response(null, { status: 201 });
       }
       const p = query.searchParams;
+      if (table === "site_api_keys") {
+        if (p.get("key_sha256") !== `eq.${huella(KEY)}`) return json([]);
+        return json([{ id: KEY_ID, retired_at: null, site: { ...SITE, ...sitio } }]);
+      }
       if (table === "user_sites") {
-        const coincide = p.get("cbf_api_key") === `eq.${KEY}` || p.get("custom_domain") === `eq.${SITE.custom_domain}`
+        const coincide = p.get("custom_domain") === `eq.${SITE.custom_domain}`
           || p.get("subdomain") === `eq.${SITE.subdomain}` || p.get("id") === `eq.${SITE.id}`;
         if (!coincide) return noEncontrado();
         if (p.get("id") === `eq.${SITE.id}`) return json({ site_name: SITE.site_name, theme_config: SITE.theme_config });
@@ -100,13 +108,15 @@ function cbf(estado) {
   const supabaseMod = { supabase: db.client, supabaseUrl: "https://fixture.invalid" };
   const access = loadModule("lib/site-runtime-access.ts", {});
   const owner = loadModule("lib/site-owner.ts", { "./supabase": supabaseMod });
+  const despues = [];
+  const keys = loadModule("lib/site-keys.ts", { "next/server": { after: (tarea) => despues.push(tarea) }, "./supabase": supabaseMod });
   const auth = loadModule("lib/auth.ts", { "next/server": { NextResponse }, "./supabase": supabaseMod, "./site-runtime-access": access,
-    "./site-owner": owner });
+    "./site-owner": owner, "./site-keys": keys });
   const publication = loadModule("lib/property-publication.ts", {});
   const user = loadModule("app/api/cbf/user/route.ts", { "next/server": { NextRequest, NextResponse }, "@/lib/auth": auth,
     "@/lib/supabase": supabaseMod });
   const track = loadModule("app/api/cbf/analytics/track/route.ts", { "next/server": { NextRequest, NextResponse },
-    "@/lib/supabase": supabaseMod, "@/lib/site-owner": owner });
+    "@/lib/supabase": supabaseMod, "@/lib/site-owner": owner, "@/lib/site-keys": keys });
   const dbLib = loadModule("lib/db.ts", { "./supabase": supabaseMod, "./property-publication": publication, "./site-owner": owner });
   const NO_ENCONTRADO = new Error("NEXT_NOT_FOUND");
   const page = loadModule("src/app/sites/[subdomain]/page.tsx", {
@@ -126,7 +136,7 @@ function cbf(estado) {
       throw error;
     }
   };
-  return { ...db, auth, pedir, visitar, pintar, page, porDominio: (d) => dbLib.getSiteByDomain(d) };
+  return { ...db, auth, despues, pedir, visitar, pintar, page, porDominio: (d) => dbLib.getSiteByDomain(d) };
 }
 const respuesta = async (res) => ({ status: res.status, body: await res.text() });
 
@@ -222,6 +232,8 @@ test("la visita que no se registra tarda lo mismo con el sitio apagado que con s
 
 // Lo que lee `user_sites` en CBF, y por qué cada lector deja o no deja pasar el sitio de una cuenta eliminada. Un lector nuevo tiene que
 // entrar aquí: si admite o pinta un sitio, también pregunta por su cuenta.
+// Desde 20261107120000 la llave se busca en `site_api_keys` con su sitio embebido (lib/site-keys.ts): quien admite un sitio por su
+// llave lo lee por ahí, y también cuenta como lector.
 const LECTORES = new Map([
   ["lib/auth.ts", "admite el sitio por su llave (toda ruta de /api/cbf pasa por authMiddleware)"],
   ["app/api/cbf/analytics/track/route.ts", "admite la visita por la llave"],
@@ -231,6 +243,7 @@ const LECTORES = new Map([
 const SIN_SITIO_QUE_ADMITIR = new Map([
   ["app/api/cbf/user/route.ts", "lee la configuración del sitio que authMiddleware ya admitió"],
   ["app/api/cbf/health/route.ts", "sólo comprueba que la base responde"],
+  ["lib/site-keys.ts", "busca la llave por su huella y anota su uso; admitir el sitio lo deciden lib/auth.ts y la ruta de track"],
   ["middleware.ts", "traduce un dominio verificado a su subdominio; no pinta nada (la ruta /sites/ de src/app no está en el build)"],
   ["app/api/internal/site-orders/[orderId]/provision/route.ts", "crea el sitio de una orden pagada (credencial interna)"],
   ["src/app/api/cbf/admin/add-custom-domain/route.ts", "administración con llave interna (fuera del build)"],
@@ -249,8 +262,9 @@ test("todo lector de user_sites en CBF está clasificado, y los que admiten o pi
   const lectores = ["app", "lib", "src", "middleware.ts"].flatMap((d) => {
     const path = join(raiz, d);
     return statSync(path).isDirectory() ? archivos(path) : [path];
-  }).filter((path) => /from\(\s*["']user_sites["']\s*\)/.test(readFileSync(path, "utf8"))).map((path) => relative(raiz, path)).sort();
-  assert.deepEqual(lectores, [...LECTORES.keys(), ...SIN_SITIO_QUE_ADMITIR.keys()].sort(), "un lector nuevo de user_sites: clasifícalo");
+  }).filter((path) => /from\(\s*["'](user_sites|site_api_keys)["']\s*\)|buscarLlave\(/.test(readFileSync(path, "utf8")))
+    .map((path) => relative(raiz, path)).sort();
+  assert.deepEqual(lectores, [...LECTORES.keys(), ...SIN_SITIO_QUE_ADMITIR.keys()].sort(), "un lector nuevo de user_sites o de site_api_keys: clasifícalo");
   for (const path of LECTORES.keys()) {
     assert.match(readFileSync(join(raiz, path), "utf8"), /sitioDeCuentaViva\(/, `${path}: ${LECTORES.get(path)}`);
   }
