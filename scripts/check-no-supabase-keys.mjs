@@ -43,7 +43,7 @@ export function findSupabaseKeys(text) {
 
 /** Los hallazgos de los archivos versionados de `cwd`, como líneas `archivo:línea: tipo`. */
 export function scanTrackedFiles(cwd = process.cwd()) {
-  const files = execFileSync("git", ["ls-files", "-z"], { cwd, encoding: "utf8" }).split("\0").filter(Boolean);
+  const files = execFileSync("git", ["ls-files", "-z"], { cwd, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 }).split("\0").filter(Boolean);
   const report = [];
   for (const file of files) {
     let buffer;
