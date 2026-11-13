@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
 
-import { findSupabaseKeys, scanTrackedFiles } from "./check-no-supabase-keys.mjs";
+import { findSupabaseKeys, scanCommitRange, scanTrackedFiles } from "./check-no-supabase-keys.mjs";
 
 // 2026-11-13: la service_role heredada de la Suite estaba escrita en `check-remote-migrations.mjs` de este repo PÚBLICO (commit
 // 81905bd) y con ella cualquiera ignora toda la RLS. Si una de estas pruebas falla, una llave de Supabase volvió al código, o el
@@ -15,6 +18,8 @@ const b64 = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
 const legacyJwt = (role, iss = "supabase") =>
   `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ iss, ref: "proyectodeprueba", role, iat: 1, exp: 2 })}.${"f".repeat(43)}`;
 const newKey = (kind) => `sb_${kind}_${"k".repeat(31)}`;
+// Revisión 111 (B1, SF13): el token personal de la cuenta (`sbp_` + 40 hex) abre la API de administración; se arma aquí.
+const personalToken = () => ["sbp", "0123456789abcdef".repeat(3).slice(0, 40)].join("_");
 
 test("el guardia ve la service_role y la anon heredadas y las llaves nuevas, y nunca repite el valor", () => {
   const service = legacyJwt("service_role");
@@ -41,6 +46,110 @@ test("una JWT que no es de Supabase y los marcadores de ejemplo no son llaves", 
 
 test("ningún archivo versionado de CBF trae una llave de Supabase (check-remote-migrations.mjs incluido)", () => {
   assert.deepEqual(scanTrackedFiles(), []);
+});
+
+// ── La guarda (revisión 111, SF13) ──────────────────────────────────────────────────────────────────────────────────────────
+// Un repo de git desechable, aislado de la configuración de quien corre la prueba (firmas, hooks, plantillas).
+function tempRepo(t) {
+  const dir = mkdtempSync(join(tmpdir(), "llaves-supabase-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const env = {
+    ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1", GIT_AUTHOR_NAME: "prueba",
+    GIT_AUTHOR_EMAIL: "prueba@example.invalid", GIT_COMMITTER_NAME: "prueba", GIT_COMMITTER_EMAIL: "prueba@example.invalid",
+  };
+  const git = (...args) => execFileSync("git", args, { cwd: dir, env, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  const write = (file, content) => {
+    mkdirSync(dirname(join(dir, file)), { recursive: true });
+    writeFileSync(join(dir, file), content);
+  };
+  const commit = (message) => {
+    git("add", "-A");
+    git("commit", "-q", "--allow-empty", "-m", message);
+    return git("rev-parse", "HEAD");
+  };
+  return { dir, git, write, commit };
+}
+
+test("el guardia ve el token personal sbp_ junto a las demás llaves, y el informe nunca lleva el valor", () => {
+  const token = personalToken();
+  const found = findSupabaseKeys([`url = "x"`, `Authorization = "Bearer ${token}"`, `SECRET=${newKey("secret")}`].join("\n"));
+  assert.deepEqual(found, [
+    { line: 2, kind: "sbp_ (token personal de la cuenta)" },
+    { line: 3, kind: "sb_secret" },
+  ]);
+  assert.ok(!JSON.stringify(found).includes(token.slice(4)), "el informe no lleva el token");
+  assert.deepEqual(findSupabaseKeys(`sbp_${"g".repeat(40)} sbp_${"a".repeat(39)}`), [], "40 hex exactos; un marcador no es un token");
+});
+
+test("un archivo de texto grande se revisa entero (antes se saltaba pasando 5 MB); un binario sí se salta", (t) => {
+  const repo = tempRepo(t);
+  const lines = Array.from({ length: 70_000 }, (_, i) => `línea de relleno ${i} ${"x".repeat(80)}`);
+  repo.write("datos/grande.txt", `${lines.join("\n")}\nAuthorization: Bearer ${personalToken()}\n`);
+  repo.write("datos/imagen.bin", Buffer.concat([Buffer.from([0x89, 0x50, 0x00, 0x01]), Buffer.from(newKey("secret"))]));
+  repo.commit("datos");
+  assert.ok(readFileSync(join(repo.dir, "datos/grande.txt")).length > 6 * 1024 * 1024);
+  assert.deepEqual(scanTrackedFiles(repo.dir), ["datos/grande.txt:70001: sbp_ (token personal de la cuenta)"]);
+});
+
+test("una llave que un push agrega y quita en otro commit no está en el árbol, pero el rango la bloquea", (t) => {
+  const repo = tempRepo(t);
+  const fromEnv = "const a = 1;\nconst llave = process.env.SUPABASE_SERVICE_ROLE_KEY;\nconst b = 2;\n";
+  repo.write("README.md", "base\n");
+  repo.write("lib/cliente.ts", fromEnv);
+  const base = repo.commit("base");
+  repo.write(".codex/config.toml", `[mcp]\nAuthorization = "Bearer ${personalToken()}"\n`);
+  repo.write("lib/cliente.ts", `const a = 1;\nconst llave = "${legacyJwt("service_role")}";\nconst b = 2;\n`);
+  const adds = repo.commit("agrega llaves (un archivo nuevo y una línea cambiada)");
+  repo.git("rm", "-q", ".codex/config.toml");
+  repo.write("lib/cliente.ts", fromEnv);
+  const head = repo.commit("las quita");
+  assert.deepEqual(scanTrackedFiles(repo.dir), [], "el árbol final está limpio");
+  const report = scanCommitRange(`${base}..${head}`, repo.dir);
+  assert.deepEqual(report, [
+    `${adds.slice(0, 12)} .codex/config.toml:2: sbp_ (token personal de la cuenta)`,
+    `${adds.slice(0, 12)} lib/cliente.ts:2: service_role heredada (JWT)`,
+  ]);
+  assert.ok(!report.join("\n").includes(personalToken().slice(4)), "el informe no lleva el token");
+  assert.deepEqual(scanCommitRange(`${adds}..${head}`, repo.dir), [], "sólo mira lo que agrega el rango, no lo que quita");
+});
+
+test("una fusión que mete una llave al resolverla se ve contra su primer padre", (t) => {
+  const repo = tempRepo(t);
+  repo.write("a.txt", "a\n");
+  const base = repo.commit("base");
+  repo.git("checkout", "-q", "-b", "rama");
+  repo.write("b.txt", "b\n");
+  repo.commit("rama");
+  repo.git("checkout", "-q", "main");
+  repo.write("c.txt", "c\n");
+  repo.commit("main");
+  repo.git("merge", "-q", "--no-ff", "--no-commit", "rama");
+  repo.write("c.txt", `c\nPUBLICA=${newKey("publishable")}\n`);
+  const merge = repo.commit("fusión con llave");
+  assert.deepEqual(scanCommitRange(`${base}..${merge}`, repo.dir), [`${merge.slice(0, 12)} c.txt:2: sb_publishable`]);
+});
+
+test("un rango mal escrito o sin historial falla con el motivo, nunca pasa en silencio", (t) => {
+  const repo = tempRepo(t);
+  repo.write("a.txt", "a\n");
+  const head = repo.commit("a");
+  assert.throws(() => scanCommitRange(head, repo.dir), /Rango inválido/);
+  assert.throws(() => scanCommitRange(`--output=/tmp/x..${head}`, repo.dir), /Rango inválido/);
+  assert.throws(() => scanCommitRange(`${"0".repeat(40)}..${head}`, repo.dir), /No encuentro el commit .*fetch-depth: 0/);
+  const cli = spawnSync(process.execPath, [new URL("./check-no-supabase-keys.mjs", import.meta.url).pathname, "--rango", `nada..${head}`],
+    { cwd: repo.dir, encoding: "utf8" });
+  assert.equal(cli.status, 2);
+  assert.match(cli.stderr, /No encuentro el commit «nada»/);
+});
+
+test("el workflow del guardia revisa el árbol y cada commit del push o del pull request, con el historial completo", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/llaves-supabase.yml", import.meta.url), "utf8");
+  assert.match(workflow, /^on:\n  push:\n  pull_request:\n/m);
+  assert.match(workflow, /actions\/checkout@v4\n\s+with:\n(?:\s+#.*\n)*\s+fetch-depth: 0\n/);
+  assert.match(workflow, /^\s+node scripts\/check-no-supabase-keys\.mjs$/m);
+  assert.match(workflow, /pull_request\)\n\s+node scripts\/check-no-supabase-keys\.mjs --rango "\$PR_BASE\.\.\$GITHUB_SHA"/);
+  assert.match(workflow, /push\)[\s\S]*git merge-base "origin\/\$DEFAULT_BRANCH" "\$GITHUB_SHA"[\s\S]*--rango "\$BEFORE\.\.\$GITHUB_SHA"/);
 });
 
 function loadServerClient(env) {
