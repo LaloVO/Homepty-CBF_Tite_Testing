@@ -1,0 +1,21 @@
+# Falla si un archivo versionado trae una llave de Supabase (JWT heredada anon o service_role, sb_secret_ o sb_publishable_).
+# 2026-11-13: la service_role heredada de la Suite estuvo escrita en check-remote-migrations.mjs de este repo público. El guardia
+# no necesita dependencias y nunca imprime una llave: sólo archivo, línea y tipo.
+name: Llaves de Supabase fuera del código
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  guardia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node scripts/check-no-supabase-keys.mjs
