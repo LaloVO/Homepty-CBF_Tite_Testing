@@ -310,7 +310,7 @@ test("SF-R5: un error de lectura no repite la llave que trae el nombre del archi
 test("el workflow del guardia revisa el árbol y cada commit del push o del pull request, con el historial completo", () => {
   const workflow = readFileSync(new URL("../.github/workflows/llaves-supabase.yml", import.meta.url), "utf8");
   assert.match(workflow, /^on:\n  push:\n  pull_request:\n/m);
-  assert.match(workflow, /actions\/checkout@v4\n\s+with:\n(?:\s+#.*\n)*\s+fetch-depth: 0\n/);
+  assert.match(workflow, /actions\/checkout@[0-9a-f]{40}\n\s+with:\n(?:\s+#.*\n)*\s+fetch-depth: 0\n/);
   assert.match(workflow, /^\s+node scripts\/check-no-supabase-keys\.mjs$/m);
   assert.match(workflow, /pull_request\)\n\s+node scripts\/check-no-supabase-keys\.mjs --rango "\$PR_BASE\.\.\$GITHUB_SHA"/);
   assert.match(workflow, /push\)[\s\S]*git merge-base "origin\/\$DEFAULT_BRANCH" "\$GITHUB_SHA"[\s\S]*--rango "\$BEFORE\.\.\$GITHUB_SHA"/);
@@ -329,6 +329,17 @@ test("CI corre estas pruebas después de instalar, el guardia antes, y el workfl
   const tests = yaml.indexOf("run: node --test scripts/test-supabase-keys.mjs");
   assert.ok(guard !== -1 && install !== -1 && tests !== -1, "el guardia, la instalación y las pruebas están en el workflow");
   assert.ok(guard < install && install < tests, "guardia, después instalación, después pruebas");
+});
+
+// Revisión sec2b (N9): el guardia sólo lee el repo. Sin `persist-credentials: false`, el checkout deja guardado el token de GitHub para
+// todos los pasos siguientes, también los scripts de instalación de terceros; y una acción fijada por etiqueta (@v4) corre lo que la
+// etiqueta apunte el día de la corrida.
+test("el workflow del guardia no deja el token de GitHub tras el checkout y fija cada acción por su SHA", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/llaves-supabase.yml", import.meta.url), "utf8");
+  assert.match(workflow, /uses: actions\/checkout@[0-9a-f]{40}\n\s+with:\n(?:\s+(?:#.*|[a-z-]+: .*)\n)*?\s+persist-credentials: false\n/);
+  const actions = workflow.match(/^\s+(?:- )?uses: \S+$/gm) ?? [];
+  assert.ok(actions.length >= 3, "checkout, pnpm/action-setup y setup-node");
+  for (const action of actions) assert.match(action, /@[0-9a-f]{40}$/, action.trim());
 });
 
 function loadServerClient(env) {
