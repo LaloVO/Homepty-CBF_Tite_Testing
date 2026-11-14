@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import vm from "node:vm";
@@ -199,10 +199,118 @@ test("un rango mal escrito o sin historial falla con el motivo, nunca pasa en si
   assert.match(cli.stderr, /No encuentro el commit «nada»/);
 });
 
+// ── Revisión sec2b (SF-R5): lo que un commit publica fuera del contenido de un archivo ─────────────────────────────────────────
+// El mensaje de cada commit, el nombre y la ruta de cada archivo y el destino de cada enlace simbólico (lo que git guarda de él) se
+// publican igual que una línea, y en este repo público cualquiera los lee. Pegar un log con una llave en el mensaje es un error
+// realista. Antes, el rango sólo leía los diffs y el árbol sólo el contenido.
+const guardCli = new URL("./check-no-supabase-keys.mjs", import.meta.url).pathname;
+
+test("SF-R5: una llave en el mensaje de un commit, también en el de una fusión, detiene el rango, y el informe no la repite", (t) => {
+  const repo = tempRepo(t);
+  repo.write("a.txt", "a\n");
+  const base = repo.commit("base");
+  const secret = `sb_secret_${"m".repeat(31)}`;
+  const inSubject = repo.commit(`config: SUPABASE_SERVICE_ROLE_KEY=${secret}`);
+  repo.write("b.txt", "b\n");
+  const inBody = repo.commit(`ci: el log del deploy\n\nsalida:\nAuthorization: Bearer ${personalToken()}`);
+  repo.git("checkout", "-q", "-b", "rama");
+  repo.write("c.txt", "c\n");
+  repo.commit("docs: la llave va en NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx, nunca en el código");
+  repo.git("checkout", "-q", "main");
+  repo.git("merge", "-q", "--no-ff", "-m", `fusión: ${legacyJwt("service_role")}`, "rama");
+  const merge = repo.git("rev-parse", "HEAD");
+  assert.deepEqual(scanTrackedFiles(repo.dir), [], "el árbol está limpio: la llave sólo está en los mensajes");
+  const report = scanCommitRange(`${base}..${merge}`, repo.dir);
+  assert.deepEqual([...report].sort(), [
+    `${inSubject.slice(0, 12)} (mensaje del commit):1: sb_secret`,
+    `${inBody.slice(0, 12)} (mensaje del commit):4: sbp_ (token personal de la cuenta)`,
+    `${merge.slice(0, 12)} (mensaje del commit):1: service_role heredada (JWT)`,
+  ].sort(), "el asunto, el cuerpo y la fusión; el marcador sb_publishable_xxx no es una llave");
+  assert.deepEqual(scanCommitRange(`${inBody}..${merge}`, repo.dir), [`${merge.slice(0, 12)} (mensaje del commit):1: service_role heredada (JWT)`],
+    "sólo los commits del rango");
+  const cli = spawnSync(process.execPath, [guardCli, "--rango", `${base}..${merge}`], { cwd: repo.dir, encoding: "utf8" });
+  assert.equal(cli.status, 1);
+  for (const value of [secret, personalToken(), legacyJwt("service_role")]) {
+    assert.ok(!`${cli.stdout}${cli.stderr}${report.join("\n")}`.includes(value.slice(4)), "el informe nunca lleva la llave");
+  }
+});
+
+test("SF-R5: una llave en el nombre o la ruta de un archivo, también vacío, se ve en el árbol y en el rango, tapada en el informe", (t) => {
+  const repo = tempRepo(t);
+  repo.write("README.md", "base\n");
+  const base = repo.commit("base");
+  const secret = `sb_secret_${"n".repeat(31)}`;
+  const publishable = `sb_publishable_${"v".repeat(31)}`;
+  repo.write(`cfg/${secret}.txt`, "nada\n");
+  repo.write(`tokens/${personalToken()}/notas.md`, `PUBLICA=${publishable}\n`);
+  repo.write(`vacio-${publishable}`, ""); // un archivo vacío no trae «+++» ni líneas en el diff
+  const adds = repo.commit("agrega");
+  const tree = scanTrackedFiles(repo.dir);
+  assert.deepEqual(tree, [
+    "cfg/«llave».txt: sb_secret en el nombre",
+    "tokens/«llave»/notas.md: sbp_ (token personal de la cuenta) en el nombre",
+    "tokens/«llave»/notas.md:1: sb_publishable",
+    "vacio-«llave»: sb_publishable en el nombre",
+  ]);
+  repo.git("rm", "-q", "-r", "--", "cfg", "tokens", `vacio-${publishable}`);
+  const head = repo.commit("quita");
+  assert.deepEqual(scanTrackedFiles(repo.dir), [], "el árbol final está limpio");
+  const range = scanCommitRange(`${base}..${head}`, repo.dir);
+  assert.deepEqual([...range].sort(), [
+    `${adds.slice(0, 12)} cfg/«llave».txt: sb_secret en el nombre`,
+    `${adds.slice(0, 12)} tokens/«llave»/notas.md: sbp_ (token personal de la cuenta) en el nombre`,
+    `${adds.slice(0, 12)} tokens/«llave»/notas.md:1: sb_publishable`,
+    `${adds.slice(0, 12)} vacio-«llave»: sb_publishable en el nombre`,
+  ].sort());
+  assert.deepEqual(scanCommitRange(`${adds}..${head}`, repo.dir), [], "borrar un archivo no agrega su nombre");
+  const cli = spawnSync(process.execPath, [guardCli, "--rango", `${base}..${head}`], { cwd: repo.dir, encoding: "utf8" });
+  assert.equal(cli.status, 1);
+  for (const value of [secret, publishable, personalToken()]) {
+    assert.ok(!`${cli.stdout}${cli.stderr}${tree.join("\n")}${range.join("\n")}`.includes(value.slice(4)), "el informe nunca lleva la llave");
+  }
+});
+
+test("SF-R5: un enlace simbólico se revisa por su destino sin seguirlo: colgante, hacia fuera del repo o en un directorio de la ruta", (t) => {
+  const repo = tempRepo(t);
+  const outside = mkdtempSync(join(tmpdir(), "llaves-fuera-"));
+  t.after(() => rmSync(outside, { recursive: true, force: true }));
+  writeFileSync(join(outside, "servidor.env"), `SUPABASE_SERVICE_ROLE_KEY=sb_secret_${"f".repeat(31)}\n`);
+  symlinkSync(`sb_secret_${"c".repeat(31)}`, join(repo.dir, "colgante")); // su destino es la llave
+  symlinkSync(join(outside, "servidor.env"), join(repo.dir, "hacia-fuera")); // lo de fuera no es del repo: no se lee
+  repo.write("datos/real.env", `PUBLICA=sb_publishable_${"r".repeat(31)}\n`);
+  symlinkSync("datos/real.env", join(repo.dir, "datos-enlace")); // apunta dentro: el archivo cuenta una vez, por sí mismo
+  repo.commit("enlaces");
+  assert.deepEqual(scanTrackedFiles(repo.dir), [
+    "colgante: sb_secret en el destino del enlace simbólico",
+    "datos/real.env:1: sb_publishable",
+  ]);
+  // Un directorio de la ruta de un archivo versionado que pasó a ser un enlace: seguirlo leería algo que git no versiona.
+  repo.write("conf/servidor.env", "SIN_LLAVE=1\n");
+  repo.commit("conf");
+  rmSync(join(repo.dir, "conf"), { recursive: true });
+  symlinkSync(outside, join(repo.dir, "conf"));
+  assert.throws(() => scanTrackedFiles(repo.dir), /conf\/servidor\.env: su ruta pasa por el enlace simbólico conf y la guarda no lo sigue/);
+  const cli = spawnSync(process.execPath, [guardCli], { cwd: repo.dir, encoding: "utf8" });
+  assert.equal(cli.status, 2, "la CLI sale con 2, nunca con 0");
+});
+
+test("SF-R5: un error de lectura no repite la llave que trae el nombre del archivo", (t) => {
+  const repo = tempRepo(t);
+  const secret = `sb_secret_${"e".repeat(31)}`;
+  repo.write(`d-${secret}/f.txt`, "a\n");
+  repo.commit("d");
+  rmSync(join(repo.dir, `d-${secret}`), { recursive: true });
+  writeFileSync(join(repo.dir, `d-${secret}`), "ahora es un archivo\n"); // ENOTDIR: el mensaje del error trae la ruta
+  const cli = spawnSync(process.execPath, [guardCli], { cwd: repo.dir, encoding: "utf8" });
+  assert.equal(cli.status, 2);
+  assert.match(cli.stderr, /ENOTDIR/);
+  assert.ok(!`${cli.stdout}${cli.stderr}`.includes(secret.slice(4)), "el error sale con la llave tapada");
+});
+
 test("el workflow del guardia revisa el árbol y cada commit del push o del pull request, con el historial completo", () => {
   const workflow = readFileSync(new URL("../.github/workflows/llaves-supabase.yml", import.meta.url), "utf8");
   assert.match(workflow, /^on:\n  push:\n  pull_request:\n/m);
-  assert.match(workflow, /actions\/checkout@v4\n\s+with:\n(?:\s+#.*\n)*\s+fetch-depth: 0\n/);
+  assert.match(workflow, /actions\/checkout@[0-9a-f]{40}\n\s+with:\n(?:\s+#.*\n)*\s+fetch-depth: 0\n/);
   assert.match(workflow, /^\s+node scripts\/check-no-supabase-keys\.mjs$/m);
   assert.match(workflow, /pull_request\)\n\s+node scripts\/check-no-supabase-keys\.mjs --rango "\$PR_BASE\.\.\$GITHUB_SHA"/);
   assert.match(workflow, /push\)[\s\S]*git merge-base "origin\/\$DEFAULT_BRANCH" "\$GITHUB_SHA"[\s\S]*--rango "\$BEFORE\.\.\$GITHUB_SHA"/);
@@ -221,6 +329,17 @@ test("CI corre estas pruebas después de instalar, el guardia antes, y el workfl
   const tests = yaml.indexOf("run: node --test scripts/test-supabase-keys.mjs");
   assert.ok(guard !== -1 && install !== -1 && tests !== -1, "el guardia, la instalación y las pruebas están en el workflow");
   assert.ok(guard < install && install < tests, "guardia, después instalación, después pruebas");
+});
+
+// Revisión sec2b (N9): el guardia sólo lee el repo. Sin `persist-credentials: false`, el checkout deja guardado el token de GitHub para
+// todos los pasos siguientes, también los scripts de instalación de terceros; y una acción fijada por etiqueta (@v4) corre lo que la
+// etiqueta apunte el día de la corrida.
+test("el workflow del guardia no deja el token de GitHub tras el checkout y fija cada acción por su SHA", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/llaves-supabase.yml", import.meta.url), "utf8");
+  assert.match(workflow, /uses: actions\/checkout@[0-9a-f]{40}\n\s+with:\n(?:\s+(?:#.*|[a-z-]+: .*)\n)*?\s+persist-credentials: false\n/);
+  const actions = workflow.match(/^\s+(?:- )?uses: \S+$/gm) ?? [];
+  assert.ok(actions.length >= 3, "checkout, pnpm/action-setup y setup-node");
+  for (const action of actions) assert.match(action, /@[0-9a-f]{40}$/, action.trim());
 });
 
 function loadServerClient(env) {
