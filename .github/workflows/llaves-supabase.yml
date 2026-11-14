@@ -3,6 +3,8 @@
 # de este repo público. El guardia no necesita dependencias y nunca imprime una llave: sólo archivo, línea y tipo.
 # Revisión 111 (SF13): además del árbol, revisa las líneas que agrega cada commit del push o del pull request. Una llave que se
 # agrega y se quita en otro commit ya no está en el árbol, pero sí en el historial público.
+# Revisión sec2 (2026-11-14, SF-3): también corren las pruebas del guardia (`scripts/test-supabase-keys.mjs`). Necesitan
+# `typescript` (cargan el cliente del middleware), así que van después de instalar; el guardia corre antes, sin dependencias.
 name: Llaves de Supabase fuera del código
 
 on:
@@ -20,9 +22,11 @@ jobs:
         with:
           # El rango (base..cabeza) necesita el historial completo, no sólo el último commit.
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+          cache: pnpm
       - name: Árbol y cada commit del push o del pull request
         env:
           BEFORE: ${{ github.event.before }}
@@ -41,3 +45,6 @@ jobs:
               node scripts/check-no-supabase-keys.mjs --rango "$BEFORE..$GITHUB_SHA"
               ;;
           esac
+      - run: pnpm install --frozen-lockfile
+      - name: Pruebas del guardia
+        run: node --test scripts/test-supabase-keys.mjs

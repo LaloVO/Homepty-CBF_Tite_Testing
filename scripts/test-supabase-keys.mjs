@@ -208,6 +208,21 @@ test("el workflow del guardia revisa el árbol y cada commit del push o del pull
   assert.match(workflow, /push\)[\s\S]*git merge-base "origin\/\$DEFAULT_BRANCH" "\$GITHUB_SHA"[\s\S]*--rango "\$BEFORE\.\.\$GITHUB_SHA"/);
 });
 
+// Revisión sec2 (SF-3): las pruebas de este archivo sólo corrían a mano, así que un guardia que dejara de ver una llave (o un workflow
+// que dejara de revisar el rango) pasaba CI en verde. Ahora corren en el mismo workflow, sólo con permiso de lectura y sin secretos.
+// Necesitan `typescript`: van después de instalar, y el guardia antes, para que no dependa de código de terceros.
+test("CI corre estas pruebas después de instalar, el guardia antes, y el workflow sólo lee el repo", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/llaves-supabase.yml", import.meta.url), "utf8");
+  const yaml = workflow.split("\n").filter((line) => !/^\s*#/.test(line)).join("\n"); // sin comentarios
+  assert.match(yaml, /^permissions:\n  contents: read\n/m);
+  assert.doesNotMatch(yaml, /id-token|secrets\./);
+  const guard = yaml.indexOf("node scripts/check-no-supabase-keys.mjs\n");
+  const install = yaml.indexOf("- run: pnpm install --frozen-lockfile");
+  const tests = yaml.indexOf("run: node --test scripts/test-supabase-keys.mjs");
+  assert.ok(guard !== -1 && install !== -1 && tests !== -1, "el guardia, la instalación y las pruebas están en el workflow");
+  assert.ok(guard < install && install < tests, "guardia, después instalación, después pruebas");
+});
+
 function loadServerClient(env) {
   const calls = [];
   const fake = { createClient: (url, key) => (calls.push({ url, key }), { fake: true }) };
