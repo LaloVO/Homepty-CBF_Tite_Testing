@@ -5,6 +5,7 @@ import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
 
 const require = createRequire(import.meta.url);
 const { NextRequest, NextResponse } = require("next/server");
@@ -60,10 +61,13 @@ function harness(options = {}) {
           const relation = column.match(/^(estados|ciudades)\((\w+)\)$/);
           return relation ? [relation[1], row[relation[1]]] : [column, row[column]];
         }));
-      } else if (table === "user_sites" && select.includes("lifecycle_status")) {
-        assert.equal(query.searchParams.get("cbf_api_key"), "eq.cbf_live_fixture");
-        data = { id: "fixture-site", user_id_supabase: "fixture-owner", organization_id: null,
-          is_active: !options.suspended, lifecycle_status: options.suspended ? "suspended" : "active" };
+      } else if (table === "site_api_keys") {
+        // La llave se busca por su sha256 con su sitio embebido (lib/site-keys.ts); la llave misma nunca va a la base.
+        assert.equal(query.searchParams.get("key_sha256"), `eq.${createHash("sha256").update("cbf_live_fixture").digest("hex")}`);
+        assert.equal(String(query).includes("cbf_live_fixture"), false);
+        assert.match(select, /site:user_sites\(.*lifecycle_status/);
+        data = [{ id: "fixture-key", retired_at: null, site: { id: "fixture-site", user_id_supabase: "fixture-owner", organization_id: null,
+          is_active: !options.suspended, lifecycle_status: options.suspended ? "suspended" : "active" } }];
       } else {
         assert.equal(table, "user_sites");
         assert.equal(select, "site_name,theme_config");
@@ -75,8 +79,9 @@ function harness(options = {}) {
   });
   const access = loadModule("lib/site-runtime-access.ts", {});
   const owner = loadModule("lib/site-owner.ts", { "./supabase": { supabase: client } });
+  const keys = loadModule("lib/site-keys.ts", { "next/server": { after: () => {} }, "./supabase": { supabase: client } });
   const auth = loadModule("lib/auth.ts", { "next/server": { NextResponse }, "./supabase": { supabase: client }, "./site-runtime-access": access,
-    "./site-owner": owner });
+    "./site-owner": owner, "./site-keys": keys });
   const { GET } = loadModule("app/api/cbf/user/route.ts", {
     "next/server": { NextRequest, NextResponse }, "@/lib/auth": auth, "@/lib/supabase": { supabase: client },
   });

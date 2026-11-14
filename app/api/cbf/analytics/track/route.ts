@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sitioDeCuentaViva } from "@/lib/site-owner";
+import { anotarUso, buscarLlave } from "@/lib/site-keys";
 
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -14,11 +15,10 @@ export async function POST(request: NextRequest) {
     return new NextResponse(null, { status: 200 });
   }
 
-  const { data: site } = await supabase
-    .from("user_sites")
-    .select("id, is_active, user_id_supabase")
-    .eq("cbf_api_key", key)
-    .single();
+  // La llave por su huella, con su sitio (lib/site-keys.ts). Una retirada cuenta como desconocida: su visita no se registra.
+  const { llave } = await buscarLlave(key);
+  const site = llave && !llave.retired_at ? llave.site : null;
+  if (llave?.retired_at) anotarUso(llave.id, "last_refused_at");
 
   // HPY-216: la visita al sitio de una cuenta eliminada no se registra, igual que la de una llave desconocida. La cuenta se pregunta
   // también para un sitio apagado: no registrar una visita tarda lo mismo con el sitio apagado que con su cuenta eliminada.
@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
     country,
     city,
   });
+  // track.js lleva su propia copia de la llave (data-key): su uso cuenta para saber cuándo una llave vieja dejó de usarse.
+  if (llave) anotarUso(llave.id, "last_used_at");
 
   return new NextResponse(null, { status: 200 });
 }

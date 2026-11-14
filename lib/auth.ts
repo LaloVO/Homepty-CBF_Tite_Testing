@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "./supabase";
 import { sitioDeCuentaViva } from "./site-owner";
+import { anotarUso, buscarLlave } from "./site-keys";
 import {
   isLegacyGrantActive,
   resolveSiteRuntimeAccess,
@@ -52,15 +53,18 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
   }
 
   try {
-    // Buscar el sitio con esta API Key
-    const { data, error } = await supabase
-      .from("user_sites")
-      .select("id, user_id_supabase, organization_id, is_active, lifecycle_status")
-      .eq("cbf_api_key", apiKey)
-      .single();
+    // Buscar la llave por su huella, con el sitio que nombra (lib/site-keys.ts): un sitio puede tener más de una activa mientras
+    // rota, y una retirada se rechaza como una desconocida, en el mismo viaje.
+    const { llave, error } = await buscarLlave(apiKey);
+    const data = llave?.site ?? null;
 
-    if (error || !data) {
-      console.error("API Key CBF no encontrada o no consultable. Error code:", error?.code);
+    if (error || !llave || !data) {
+      console.error("API Key CBF no encontrada o no consultable. Error code:", error?.code ?? "PGRST116");
+      return null;
+    }
+    if (llave.retired_at) {
+      anotarUso(llave.id, "last_refused_at");
+      console.error("API Key CBF no encontrada o no consultable. Error code:", "PGRST116");
       return null;
     }
 
@@ -82,6 +86,7 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
       return null;
     }
 
+    anotarUso(llave.id, "last_used_at");
     return {
       siteId: data.id,
       userId: data.user_id_supabase,
