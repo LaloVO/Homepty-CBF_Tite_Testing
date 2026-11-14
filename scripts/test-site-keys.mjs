@@ -108,6 +108,11 @@ function cbf(llaves) {
 const respuesta = async (res) => ({ status: res.status, body: await res.text() });
 const viajes = (requests) => Math.max(...requests.map((r) => r.nivel)) + 1;
 const activas = () => ({ [huella(VIEJA)]: { id: "llave-vieja", retired_at: null }, [huella(NUEVA)]: { id: "llave-nueva", retired_at: null } });
+// `retired_at` es la hora desde la que la llave se rechaza (revisión sec2, SF-7): una pasada es una llave retirada; una por llegar, el
+// retiro que «Regenerar» programó 24 h después. Relativas a ahora para que la prueba no caduque.
+const HORA = 60 * 60 * 1000;
+const RETIRADA = () => new Date(Date.now() - HORA).toISOString();
+const PROGRAMADA = () => new Date(Date.now() + 23 * HORA + 59 * 60 * 1000).toISOString();
 
 test("mientras el sitio rota, la llave vieja y la nueva entregan lo mismo: su despliegue puede cambiar sin un solo 401", async () => {
   const vistas = [];
@@ -122,7 +127,7 @@ test("mientras el sitio rota, la llave vieja y la nueva entregan lo mismo: su de
 });
 
 test("una llave retirada se rechaza igual que una desconocida: mismo 401, mismo cuerpo y un solo viaje; su intento se anota después de responder", async () => {
-  const llaves = { ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: "2026-11-20T00:00:00Z" } };
+  const llaves = { ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: RETIRADA() } };
   const desconocida = cbf(llaves);
   const r1 = await respuesta(await desconocida.pedir("cbf_live_fixture_nadie_000000000"));
   const retirada = cbf(llaves);
@@ -165,7 +170,7 @@ test("la llave nunca viaja en claro a la base: sólo su sha256 (los registros de
 });
 
 test("la visita con una llave retirada no se registra, como la de una desconocida; con una activa se registra y anota su uso", async () => {
-  const llaves = { ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: "2026-11-20T00:00:00Z" } };
+  const llaves = { ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: RETIRADA() } };
   const vieja = cbf(llaves);
   assert.deepEqual(await respuesta(await vieja.visitar(VIEJA)), { status: 200, body: "" });
   await vieja.terminar();
@@ -188,4 +193,39 @@ test("si anotar el uso no se puede programar, la llave se admite igual: anotar n
     "./site-keys": keys });
   const contexto = await auth.verifyApiKey(NUEVA);
   assert.equal(contexto?.siteId, SITE.id);
+});
+
+test("«Regenerar» programa el retiro de la anterior 24 h después: hasta esa hora sirve igual que la nueva y anota su uso; desde ella se rechaza como una desconocida", async () => {
+  // Owner (DECISIONES 2026-11-14, revisión sec2 SF-7): el dueño puede revocar una llave filtrada desde /my-site, y su sitio y sus pestañas
+  // abiertas tienen 24 h para pasar a la nueva. Si esta prueba falla, «Regenerar» vuelve a apagar el sitio en el instante (una fecha
+  // por llegar tratada como retiro) o la anterior no se apaga nunca (una fecha pasada tratada como activa).
+  const programada = cbf({ ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: PROGRAMADA() } });
+  const antes = await programada.pedir(VIEJA);
+  assert.equal(antes.status, 200, "a 1 minuto de su retiro, la anterior todavía entrega el perfil");
+  await programada.terminar();
+  assert.deepEqual(programada.writes.map((w) => [w.table, Object.keys(w.body), w.params.id]), [["site_api_keys", ["last_used_at"], "eq.llave-vieja"]],
+    "y su uso se anota: la rotación ve que sigue en uso");
+  const visita = cbf({ ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: PROGRAMADA() } });
+  await visita.visitar(VIEJA);
+  await visita.terminar();
+  assert.deepEqual(visita.writes.map((w) => w.table), ["analytics_events", "site_api_keys"], "su visita cuenta");
+
+  const vencida = cbf({ ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: new Date(Date.now() - 1000).toISOString() } });
+  const desconocida = cbf(activas());
+  const despues = await respuesta(await vencida.pedir(VIEJA));
+  assert.deepEqual(despues, await respuesta(await desconocida.pedir("cbf_live_fixture_nadie_000000000")),
+    "un segundo después de su retiro, el mismo 401 y el mismo cuerpo que una desconocida");
+  await vencida.terminar();
+  assert.deepEqual(vencida.writes.map((w) => Object.keys(w.body)), [["last_refused_at"]]);
+  assert.equal((await vencida.pedir(NUEVA)).status, 200, "la nueva no cambia");
+});
+
+test("llaveRetirada: sin fecha sirve; una fecha por llegar sirve hasta esa hora; una pasada, la de este instante o una que no se entiende, no", () => {
+  const { llaveRetirada } = loadModule("lib/site-keys.ts", { "next/server": { after() {} }, "./supabase": { supabase: null } });
+  const t = Date.parse("2026-11-15T12:00:00Z");
+  assert.equal(llaveRetirada(null, t), false);
+  assert.equal(llaveRetirada("2026-11-15T12:00:01Z", t), false, "un segundo antes de su retiro sigue sirviendo");
+  assert.equal(llaveRetirada("2026-11-15T12:00:00Z", t), true, "a la hora exacta ya no");
+  assert.equal(llaveRetirada("2026-11-15T11:59:59.999+00:00", t), true);
+  assert.equal(llaveRetirada("no es una fecha", t), true, "falla cerrada");
 });
