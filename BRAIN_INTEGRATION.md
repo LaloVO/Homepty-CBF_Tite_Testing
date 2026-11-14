@@ -156,7 +156,7 @@ Tabla en la DB del Brain (proyecto `zwmzfqlxcgqlasnbqfjb`):
 CREATE TABLE IF NOT EXISTS brain_api_usage (
   id BIGSERIAL PRIMARY KEY,
   user_id_supabase TEXT,
-  cbf_api_key TEXT,
+  cbf_api_key TEXT,  -- la huella sha256 de la llave del sitio, nunca la llave (revisión sec2, SF-13)
   brain_endpoint TEXT NOT NULL,
   cost_units INTEGER NOT NULL DEFAULT 1,
   status TEXT NOT NULL DEFAULT 'ok',

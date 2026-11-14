@@ -7,6 +7,7 @@ import {
   type BrainValuationRequest,
 } from "@/lib/brain-client";
 import { trackBrainUsage } from "@/lib/intelligence";
+import { huellaDeLlave } from "@/lib/site-keys";
 
 /**
  * POST /api/cbf/intelligence/valuation
@@ -44,7 +45,10 @@ export async function POST(request: NextRequest) {
     return authResult;
   }
 
-  const apiKey = request.headers.get("Authorization")?.split(" ")[1] ?? null;
+  // El consumo se anota con la huella sha256 de la llave (la misma de site_api_keys.key_sha256 en la Suite), nunca con la llave: la
+  // base del Brain guardaba en claro la llave de cada llamada (revisión sec2, SF-13).
+  const llave = request.headers.get("Authorization")?.split(" ")[1];
+  const huellaLlave = llave ? huellaDeLlave(llave) : null;
   const userId = authResult.userId;
   const start = Date.now();
 
@@ -90,7 +94,7 @@ export async function POST(request: NextRequest) {
     console.error("[Intelligence/valuation] Error llamando Brain:", error);
     await trackBrainUsage({
       user_id_supabase: userId,
-      cbf_api_key: apiKey,
+      cbf_api_key: huellaLlave,
       brain_endpoint: "valueweb.estimate",
       cost_units: 1,
       status: "brain_unreachable",
@@ -106,7 +110,7 @@ export async function POST(request: NextRequest) {
   if (!valuation) {
     await trackBrainUsage({
       user_id_supabase: userId,
-      cbf_api_key: apiKey,
+      cbf_api_key: huellaLlave,
       brain_endpoint: "valueweb.estimate",
       cost_units: 1,
       status: "brain_unreachable",
@@ -123,7 +127,7 @@ export async function POST(request: NextRequest) {
   if (status !== "estimated" || !valuation.valor_promedio) {
     await trackBrainUsage({
       user_id_supabase: userId,
-      cbf_api_key: apiKey,
+      cbf_api_key: huellaLlave,
       brain_endpoint: "valueweb.estimate",
       cost_units: 1,
       status: "insufficient_comparables",
@@ -147,7 +151,7 @@ export async function POST(request: NextRequest) {
 
   await trackBrainUsage({
     user_id_supabase: userId,
-    cbf_api_key: apiKey,
+    cbf_api_key: huellaLlave,
     brain_endpoint: "valueweb.estimate",
     cost_units: 1,
     status: "ok",
@@ -155,7 +159,7 @@ export async function POST(request: NextRequest) {
   });
   await trackBrainUsage({
     user_id_supabase: userId,
-    cbf_api_key: apiKey,
+    cbf_api_key: huellaLlave,
     brain_endpoint: "ai.interpretation.valuation",
     cost_units: 1,
     status: explanation ? "ok" : "no_explanation",
