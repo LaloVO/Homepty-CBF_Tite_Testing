@@ -19,7 +19,8 @@ Bitácora: `/private/tmp/sec2-fix-llaves/NOTAS.md`. **Nada se empujó ni se desp
 
 **La guarda `scripts/check-no-supabase-keys.mjs` es el mismo archivo en CBF, la Suite y Welcome**: sha256
 `3d99a192535ad4b8edda19f6e422935f66644a4780828addb331295ea6fc9299`. Antes, la de CBF difería en dos líneas de su encabezado; ahora
-lleva el de la Suite y Welcome. Un cambio a la guarda se copia igual a los tres (desde la re-revisión sec2b, `8f06b7ac…`: abajo).
+lleva el de la Suite y Welcome. Un cambio a la guarda se copia igual a los tres (desde la re-revisión sec2b, `8f06b7ac…`, y desde la
+revisión delta 2b, `7213b97c…`: abajo).
 
 | Ítem | Arreglo | Commit | Prueba (`scripts/test-supabase-keys.mjs`) |
 | --- | --- | --- | --- |
@@ -48,7 +49,7 @@ que el código. Bitácora: `/private/tmp/sec2-fix-llaves/NOTAS.md`, sección «R
 workflow corrió en GitHub.
 
 **La guarda `scripts/check-no-supabase-keys.mjs` sigue siendo el mismo archivo en CBF, la Suite y Welcome**, ahora con sha256
-`8f06b7acb996bc694f42514531caebc08f2a9f2171d16c72ffe7ef511fd280ae`.
+`8f06b7acb996bc694f42514531caebc08f2a9f2171d16c72ffe7ef511fd280ae` (desde la revisión delta 2b, `7213b97c…`: abajo).
 
 | Ítem | Arreglo | Commit | Prueba (`scripts/test-supabase-keys.mjs`) |
 | --- | --- | --- | --- |
@@ -56,7 +57,8 @@ workflow corrió en GitHub.
 | N9 | `llaves-supabase.yml`: `persist-credentials: false` en el checkout (ni el guardia ni `pnpm install` usan el token: las 535 dependencias vienen del registro, ninguna de git), y cada acción fijada por el SHA del commit al que apuntaba `@v4` el 2026-11-14 (checkout v4.4.0 `11d5960a…`, pnpm/action-setup v4.3.0 `b906affc…`, setup-node v4.4.0 `49933ea5…`). El código que corre no cambia | `8445bb6` | exige `persist-credentials: false` y un SHA de 40 caracteres en cada `uses:`; con el workflow anterior fallan 2 |
 
 **Lo que la guarda no ve** (N8): una llave partida en dos líneas, con `\` de shell o concatenada en JS; una dentro de un gzip, en base64,
-con escapes `\u` de JSON o con un carácter de ancho cero; el mensaje de una etiqueta anotada y el autor o el committer de un commit; en el
+con escapes `\u` de JSON o con un carácter de ancho cero; el mensaje de una etiqueta anotada y el autor o el committer de un commit (éstos
+sí desde la revisión delta 2b, abajo); en el
 árbol, un archivo cuyo nombre no es UTF-8 válido (sólo en Linux; el rango sí lo revisa). Falla cerrada (exit 2) con un force-push y con un
 submódulo. El detalle y el porqué de cada decisión están en el §8 del runbook de la Suite.
 
@@ -69,3 +71,28 @@ etiquetas (104 commits, 234 rutas) no hay un mensaje, un nombre ni un enlace que
 
 Lo que no se verificó: ninguna corrida real en GitHub; es la prueba viva de los SHA fijados, de `persist-credentials: false` y de que
 `pnpm/action-setup` fijado tome pnpm 10.30.3 de `packageManager`, como lo hacía `@v4`.
+
+## Ronda de la revisión delta 2b (revision-2b-delta, 2026-11-14)
+
+Fuente: la revisión delta independiente `revision-2b-delta` (copia en la memoria del agente, `revisiones/revision-2b-delta-2026-11-14.md`).
+Aprobó la guarda con un nit, ND6: no veía el nombre ni el correo del autor y del committer de un commit, que en este repo público se
+publican con cada commit. Bitácora: `/private/tmp/sec2-fix/NOTAS.md`, sección «Ronda FIX3-SEC». **Nada se empujó ni se desplegó**, y ningún
+workflow corrió en GitHub.
+
+**La guarda sigue siendo el mismo archivo en CBF, la Suite y Welcome**, ahora con sha256
+`7213b97c9ebcf362ed4e00694d3ebb9d4216f047daabb7542f7379060dbc9d62`.
+
+| Ítem | Arreglo | Commit | Prueba (`scripts/test-supabase-keys.mjs`) |
+| --- | --- | --- | --- |
+| ND6 | La pasada de mensajes del rango lee también el nombre y el correo del autor y del committer de cada commit (`%an %ae %cn %ce`, la identidad que guarda el commit, no la de `.mailmap`). El informe nombra el campo y el tipo, nunca el valor: ni la llave ni la identidad, así que el log público de Actions tampoco la lleva | `bbb4be3` | Un commit por campo (`sb_secret_`, `sbp_`, una service_role heredada, `sb_publishable_`) y un `.mailmap`; el informe exacto de los cuatro, sólo los commits del rango, la CLI sale 1 sin la llave ni la identidad. Con la guarda `8f06b7ac` falla |
+
+**Lo que la guarda no ve**, desde esta ronda: lo de arriba, salvo el autor y el committer de un commit, que ya ve. Tampoco ve el autor de
+una etiqueta anotada, igual que su mensaje.
+
+Verificación: la prueba de la guarda pasó de 20 a **21/21**; `pnpm test:supabase-keys` 21/21 con el árbol limpio, `pnpm test:site-runtime`
+62/62 y `tsc --noEmit` 0. Mutaciones en una copia desechable: **14 de 14 muertas**, entre ellas quitar cada campo, cruzar sus nombres,
+imprimir el valor y leer `%aN`. Los rangos `origin/master..` de esta rama, de la integración y de `fix/cbf-user-sites` salen 0, y en todo el
+historial de las 19 ramas y etiquetas (109 commits) ninguna identidad trae una llave. El detalle, los scripts y las salidas están en el §9 y
+en `revision-2b/` del runbook de la Suite.
+
+Lo que no se verificó: ninguna corrida real en GitHub.
