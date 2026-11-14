@@ -50,7 +50,7 @@ const PROFILE = { id: OWNER, nombre_usuario: "Beto Bravo", email_usuario: "beto@
  * La base vista por CBF con las llaves del sitio en `site_api_keys` (por su huella): `llaves` es { huella → { id, retired_at } }.
  * Anota cada petición (con su nivel de viaje) y cada escritura.
  */
-function base(llaves) {
+function base(llaves, sitio = SITE) {
   const requests = [];
   const writes = [];
   let respondidas = 0;
@@ -74,7 +74,7 @@ function base(llaves) {
       }
       if (table === "site_api_keys") {
         const fila = llaves[(p.get("key_sha256") ?? "").replace(/^eq\./, "")];
-        return json(fila ? [{ ...fila, site: SITE }] : []);
+        return json(fila ? [{ ...fila, site: sitio }] : []);
       }
       if (table === "commercial_entitlement_grants") return json([{ valid_from: "2026-08-13T00:00:00Z", valid_until: null, revoked_at: null }]);
       if (table === "usuarios") return json(PROFILE);
@@ -85,8 +85,8 @@ function base(llaves) {
   return { client, requests, writes };
 }
 
-function cbf(llaves) {
-  const db = base(llaves);
+function cbf(llaves, sitio = SITE) {
+  const db = base(llaves, sitio);
   const supabaseMod = { supabase: db.client, supabaseUrl: "https://fixture.invalid" };
   const despues = [];
   const access = loadModule("lib/site-runtime-access.ts", {});
@@ -228,4 +228,53 @@ test("llaveRetirada: sin fecha sirve; una fecha por llegar sirve hasta esa hora;
   assert.equal(llaveRetirada("2026-11-15T12:00:00Z", t), true, "a la hora exacta ya no");
   assert.equal(llaveRetirada("2026-11-15T11:59:59.999+00:00", t), true);
   assert.equal(llaveRetirada("no es una fecha", t), true, "falla cerrada");
+});
+
+test("el uso de una llave que existe y no está retirada se anota aunque CBF no admita su sitio (suspendido o apagado): la rotación no la cree «sin uso»", async () => {
+  // Revisión sec2, SF-8: antes el uso se anotaba sólo si la llave se admitía. La llave de un sitio suspendido que seguía en uso parecía
+  // sin uso, y el retiro de la rotación (que retira la anterior cuando su uso se detuvo) se la podía llevar. Si esta prueba falla, vuelve
+  // ese hueco; la respuesta (401, o la visita sin registrar) no cambia.
+  for (const [nombre, sitio] of [["suspendido", { ...SITE, lifecycle_status: "suspended" }], ["apagado", { ...SITE, is_active: false }]]) {
+    const pedido = cbf(activas(), sitio);
+    assert.equal((await pedido.pedir(VIEJA)).status, 401, `un sitio ${nombre} no se admite`);
+    await pedido.terminar();
+    assert.deepEqual(pedido.writes.map((w) => [w.table, Object.keys(w.body), w.params.id]), [["site_api_keys", ["last_used_at"], "eq.llave-vieja"]],
+      `pero el uso de su llave queda anotado (${nombre})`);
+  }
+  // En /analytics/track la visita de un sitio apagado no se registra (la ruta mira is_active y la cuenta): el uso de su llave, sí.
+  const visita = cbf(activas(), { ...SITE, is_active: false });
+  assert.deepEqual(await respuesta(await visita.visitar(VIEJA)), { status: 200, body: "" });
+  await visita.terminar();
+  assert.deepEqual(visita.writes.map((w) => [w.table, Object.keys(w.body ?? {})]), [["site_api_keys", ["last_used_at"]]],
+    "la visita del sitio apagado no se registra, el uso de su llave sí");
+  const retirada = cbf({ ...activas(), [huella(VIEJA)]: { id: "llave-vieja", retired_at: RETIRADA() } }, { ...SITE, lifecycle_status: "suspended" });
+  await retirada.pedir(VIEJA);
+  await retirada.terminar();
+  assert.deepEqual(retirada.writes.map((w) => Object.keys(w.body)), [["last_refused_at"]], "una retirada sigue anotando sólo su rechazo");
+});
+
+test("/api/cbf/health responde 503 si site_api_keys no responde (todos los satélites recibirían 401), sin detalles del error", async () => {
+  // Revisión sec2, SF-8: health miraba sólo user_sites; con CBF desplegado antes de 20261107120000, o con la tabla caída, seguía en 200.
+  const salud = (fallaLlaves) => {
+    const client = createClient("https://fixture.invalid", "fixture-service-key", {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: { fetch: async (url) => {
+        const tabla = new URL(url).pathname.split("/").at(-1);
+        if (tabla === "site_api_keys" && fallaLlaves) {
+          return new Response(JSON.stringify({ code: "PGRST205", message: "Could not find the table 'public.site_api_keys' in the schema cache" }),
+            { status: 404, headers: { "Content-Type": "application/json" } });
+        }
+        return new Response(JSON.stringify([{ id: "x" }]), { status: 200, headers: { "Content-Type": "application/json" } });
+      } },
+    });
+    return loadModule("app/api/cbf/health/route.ts", { "next/server": { NextResponse }, "@/lib/supabase": { supabase: client } });
+  };
+  const caida = await (await salud(true)).GET();
+  assert.equal(caida.status, 503);
+  const cuerpo = await caida.json();
+  assert.deepEqual(cuerpo, { ok: false, dependencies: { database: "available", site_keys: "unavailable" } });
+  assert.equal(JSON.stringify(cuerpo).includes("PGRST205"), false, "el error no sale");
+  const bien = await (await salud(false)).GET();
+  assert.equal(bien.status, 200);
+  assert.deepEqual(await bien.json(), { ok: true, dependencies: { database: "available", site_keys: "available" } });
 });

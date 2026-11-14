@@ -67,6 +67,10 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
       console.error("API Key CBF no encontrada o no consultable. Error code:", "PGRST116");
       return null;
     }
+    // El uso de una llave que existe y no está retirada se anota ANTES de decidir el acceso (revisión sec2, SF-8): la de un sitio
+    // suspendido, en gracia o de una cuenta eliminada que sigue en uso no debe parecer «sin uso», porque la rotación retira la anterior
+    // cuando su uso se detuvo. Se anota después de responder y no cambia la respuesta.
+    anotarUso(llave.id, "last_used_at");
 
     const lifecycleStatus = (data.lifecycle_status ?? null) as SiteLifecycleStatus;
     const needsLegacyResolution = data.is_active && lifecycleStatus === "pending";
@@ -86,7 +90,6 @@ export async function verifyApiKey(apiKey: string): Promise<SiteAuthContext | nu
       return null;
     }
 
-    anotarUso(llave.id, "last_used_at");
     return {
       siteId: data.id,
       userId: data.user_id_supabase,

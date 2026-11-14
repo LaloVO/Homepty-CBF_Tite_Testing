@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
   const retirada = llave !== null && llaveRetirada(llave.retired_at);
   const site = llave && !retirada ? llave.site : null;
   if (llave && retirada) anotarUso(llave.id, "last_refused_at");
+  // track.js lleva su propia copia de la llave (data-key): su uso cuenta para saber cuándo una llave vieja dejó de usarse, también si la
+  // visita no se registra (sitio apagado o de una cuenta eliminada; revisión sec2, SF-8).
+  if (llave && !retirada) anotarUso(llave.id, "last_used_at");
 
   // HPY-216: la visita al sitio de una cuenta eliminada no se registra, igual que la de una llave desconocida. La cuenta se pregunta
   // también para un sitio apagado: no registrar una visita tarda lo mismo con el sitio apagado que con su cuenta eliminada.
@@ -40,8 +43,6 @@ export async function POST(request: NextRequest) {
     country,
     city,
   });
-  // track.js lleva su propia copia de la llave (data-key): su uso cuenta para saber cuándo una llave vieja dejó de usarse.
-  if (llave) anotarUso(llave.id, "last_used_at");
 
   return new NextResponse(null, { status: 200 });
 }

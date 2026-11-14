@@ -242,7 +242,7 @@ const LECTORES = new Map([
 ]);
 const SIN_SITIO_QUE_ADMITIR = new Map([
   ["app/api/cbf/user/route.ts", "lee la configuración del sitio que authMiddleware ya admitió"],
-  ["app/api/cbf/health/route.ts", "sólo comprueba que la base responde"],
+  ["app/api/cbf/health/route.ts", "sólo comprueba que la base y las llaves responden"],
   ["lib/site-keys.ts", "busca la llave por su huella y anota su uso; admitir el sitio lo deciden lib/auth.ts y la ruta de track"],
   ["middleware.ts", "traduce un dominio verificado a su subdominio; no pinta nada (la ruta /sites/ de src/app no está en el build)"],
   ["app/api/internal/site-orders/[orderId]/provision/route.ts", "crea el sitio de una orden pagada (credencial interna)"],
