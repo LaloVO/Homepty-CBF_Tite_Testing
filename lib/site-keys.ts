@@ -6,12 +6,20 @@ import { supabase } from "./supabase";
  * Las llaves de los sitios, por su huella (owner, entrada 104, decisión 3: rotarlas «siempre y cuando garantices que no haya efectos
  * colaterales a los sitios satélites»). La Suite guarda en `site_api_keys` el sha256 de cada llave de un sitio, nunca la llave
  * (migración 20261107120000): un sitio puede tener más de una activa mientras su despliegue cambia de la vieja a la nueva, y una llave
- * retirada (`retired_at`, sólo con el paso explícito del runbook) se rechaza como una desconocida. Toda llave que se escribe en
- * `user_sites.cbf_api_key` entra sola como activa (trigger de la Suite), así que el aprovisionamiento y «Regenerar» en /my-site no
- * cambian.
+ * retirada se rechaza como una desconocida. Toda llave que se escribe en `user_sites.cbf_api_key` entra sola como activa (trigger de la
+ * Suite), así que el aprovisionamiento no cambia; «Regenerar» en /my-site programa además el retiro de la anterior 24 h después.
  */
 export function huellaDeLlave(llave: string): string {
   return createHash("sha256").update(llave).digest("hex");
+}
+
+/**
+ * ¿La llave ya no sirve? `retired_at` es la hora desde la que se rechaza: el paso explícito de la rotación la pone en el momento, y
+ * «Regenerar» en /my-site la programa 24 h después (revisión sec2, SF-7): hasta esa hora la anterior sigue sirviendo, para que el despliegue
+ * y las pestañas abiertas del sitio pasen a la nueva sin cortarse. Una fecha que no se entiende cuenta como retirada (falla cerrada).
+ */
+export function llaveRetirada(retiradaEn: string | null, ahora: number = Date.now()): boolean {
+  return retiradaEn !== null && !(Date.parse(retiradaEn) > ahora);
 }
 
 /** Lo que CBF necesita de una llave y del sitio que nombra. */

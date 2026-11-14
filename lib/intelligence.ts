@@ -7,7 +7,10 @@
  *
  * La conexión usa BRAIN_DATABASE_URL (direct connection) porque el cliente
  * @supabase/supabase-js del CBF apunta a la DB central.
+ *
+ * `cbf_api_key` guarda la huella sha256 de la llave del sitio, nunca la llave (revisión sec2, SF-13).
  */
+import { createHash } from "node:crypto";
 import { Pool } from "pg";
 
 const BRAIN_DATABASE_URL = process.env.BRAIN_DATABASE_URL;
@@ -26,11 +29,18 @@ function getPool(): Pool {
 
 export interface BrainUsageEntry {
   user_id_supabase?: string | null;
+  /** La huella sha256 de la llave del sitio (lib/site-keys.ts, huellaDeLlave). */
   cbf_api_key?: string | null;
   brain_endpoint: string;
   cost_units?: number;
   status?: string;
   latency_ms?: number;
+}
+
+/** brain_api_usage nunca guarda una llave de sitio: si llega una con su forma (`cbf_live_…`), se guarda su huella sha256. */
+function sinLlaveEnClaro(valor: string | null | undefined): string | null {
+  if (!valor) return null;
+  return valor.startsWith("cbf_live_") ? createHash("sha256").update(valor).digest("hex") : valor;
 }
 
 /**
@@ -46,7 +56,7 @@ export async function trackBrainUsage(entry: BrainUsageEntry): Promise<void> {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [
         entry.user_id_supabase ?? null,
-        entry.cbf_api_key ?? null,
+        sinLlaveEnClaro(entry.cbf_api_key),
         entry.brain_endpoint,
         entry.cost_units ?? 1,
         entry.status ?? "ok",

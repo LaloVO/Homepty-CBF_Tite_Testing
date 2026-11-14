@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sitioDeCuentaViva } from "@/lib/site-owner";
-import { anotarUso, buscarLlave } from "@/lib/site-keys";
+import { anotarUso, buscarLlave, llaveRetirada } from "@/lib/site-keys";
 
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -15,10 +15,15 @@ export async function POST(request: NextRequest) {
     return new NextResponse(null, { status: 200 });
   }
 
-  // La llave por su huella, con su sitio (lib/site-keys.ts). Una retirada cuenta como desconocida: su visita no se registra.
+  // La llave por su huella, con su sitio (lib/site-keys.ts). Una retirada (o cuyo retiro programado ya llegó) cuenta como desconocida:
+  // su visita no se registra.
   const { llave } = await buscarLlave(key);
-  const site = llave && !llave.retired_at ? llave.site : null;
-  if (llave?.retired_at) anotarUso(llave.id, "last_refused_at");
+  const retirada = llave !== null && llaveRetirada(llave.retired_at);
+  const site = llave && !retirada ? llave.site : null;
+  if (llave && retirada) anotarUso(llave.id, "last_refused_at");
+  // track.js lleva su propia copia de la llave (data-key): su uso cuenta para saber cuándo una llave vieja dejó de usarse, también si la
+  // visita no se registra (sitio apagado o de una cuenta eliminada; revisión sec2, SF-8).
+  if (llave && !retirada) anotarUso(llave.id, "last_used_at");
 
   // HPY-216: la visita al sitio de una cuenta eliminada no se registra, igual que la de una llave desconocida. La cuenta se pregunta
   // también para un sitio apagado: no registrar una visita tarda lo mismo con el sitio apagado que con su cuenta eliminada.
@@ -38,8 +43,6 @@ export async function POST(request: NextRequest) {
     country,
     city,
   });
-  // track.js lleva su propia copia de la llave (data-key): su uso cuenta para saber cuándo una llave vieja dejó de usarse.
-  if (llave) anotarUso(llave.id, "last_used_at");
 
   return new NextResponse(null, { status: 200 });
 }
