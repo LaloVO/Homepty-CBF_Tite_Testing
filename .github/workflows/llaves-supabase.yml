@@ -1,6 +1,8 @@
-# Falla si un archivo versionado trae una llave de Supabase (JWT heredada anon o service_role, sb_secret_ o sb_publishable_).
-# 2026-11-13: la service_role heredada de la Suite estuvo escrita en check-remote-migrations.mjs de este repo público. El guardia
-# no necesita dependencias y nunca imprime una llave: sólo archivo, línea y tipo.
+# Falla si un archivo versionado trae una llave de Supabase (JWT heredada anon o service_role, sb_secret_, sb_publishable_ o el
+# token personal sbp_ de la cuenta). 2026-11-13: la service_role heredada de la Suite estuvo escrita en check-remote-migrations.mjs
+# de este repo público. El guardia no necesita dependencias y nunca imprime una llave: sólo archivo, línea y tipo.
+# Revisión 111 (SF13): además del árbol, revisa las líneas que agrega cada commit del push o del pull request. Una llave que se
+# agrega y se quita en otro commit ya no está en el árbol, pero sí en el historial público.
 name: Llaves de Supabase fuera del código
 
 on:
@@ -15,7 +17,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # El rango (base..cabeza) necesita el historial completo, no sólo el último commit.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: node scripts/check-no-supabase-keys.mjs
+      - name: Árbol y cada commit del push o del pull request
+        env:
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          node scripts/check-no-supabase-keys.mjs
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              node scripts/check-no-supabase-keys.mjs --rango "$PR_BASE..$GITHUB_SHA"
+              ;;
+            push)
+              if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+                BEFORE=$(git merge-base "origin/$DEFAULT_BRANCH" "$GITHUB_SHA")
+              fi
+              node scripts/check-no-supabase-keys.mjs --rango "$BEFORE..$GITHUB_SHA"
+              ;;
+          esac
