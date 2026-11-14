@@ -82,14 +82,70 @@ test("el guardia ve el token personal sbp_ junto a las demás llaves, y el infor
   assert.deepEqual(findSupabaseKeys(`sbp_${"g".repeat(40)} sbp_${"a".repeat(39)}`), [], "40 hex exactos; un marcador no es un token");
 });
 
-test("un archivo de texto grande se revisa entero (antes se saltaba pasando 5 MB); un binario sí se salta", (t) => {
+test("un archivo de texto grande se revisa entero (antes se saltaba pasando 5 MB)", (t) => {
   const repo = tempRepo(t);
   const lines = Array.from({ length: 70_000 }, (_, i) => `línea de relleno ${i} ${"x".repeat(80)}`);
   repo.write("datos/grande.txt", `${lines.join("\n")}\nAuthorization: Bearer ${personalToken()}\n`);
-  repo.write("datos/imagen.bin", Buffer.concat([Buffer.from([0x89, 0x50, 0x00, 0x01]), Buffer.from(newKey("secret"))]));
   repo.commit("datos");
   assert.ok(readFileSync(join(repo.dir, "datos/grande.txt")).length > 6 * 1024 * 1024);
   assert.deepEqual(scanTrackedFiles(repo.dir), ["datos/grande.txt:70001: sbp_ (token personal de la cuenta)"]);
+});
+
+// Revisión sec2 (SF-2, M-G2): una llave escrita en UTF-16 (el `>` de PowerShell 5, «Unicode» del Bloc de notas), en un texto con un
+// NUL en sus primeros 4 KB o dentro de un binario es tan pública como en UTF-8. Antes un NUL saltaba el archivo entero, y un UTF-16
+// siempre trae NUL: la guarda decía «sin llaves» con la llave en el árbol de este repo público.
+const utf16le = (text) => Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")]);
+const utf16beSinBom = (text) => Buffer.from(text, "utf16le").swap16();
+
+test("una llave en UTF-16 (LE con BOM o BE sin BOM), en un texto con NUL o dentro de un binario se ve en el árbol", (t) => {
+  const repo = tempRepo(t);
+  repo.write("windows/servidor.env", utf16le(`# notas\r\nSUPABASE_SERVICE_ROLE_KEY=sb_secret_${"u".repeat(31)}\r\n`));
+  repo.write("windows/token.env", utf16beSinBom(`A=1\nB=${personalToken()}\n`));
+  repo.write("datos/con-nul.txt", Buffer.concat([Buffer.from("cabecera\0\nPUBLICA="), Buffer.from(`${newKey("publishable")}\n`)]));
+  repo.write("datos/imagen.bin", Buffer.concat([Buffer.from([0x89, 0x50, 0x00, 0x01]), Buffer.from(newKey("secret"))]));
+  repo.commit("datos");
+  assert.deepEqual(scanTrackedFiles(repo.dir), [
+    "datos/con-nul.txt:2: sb_publishable",
+    "datos/imagen.bin:1: sb_secret",
+    "windows/servidor.env:2: sb_secret",
+    "windows/token.env:2: sbp_ (token personal de la cuenta)",
+  ]);
+});
+
+// Revisión sec2 (SF-2): sin `--text`, git no da el contenido de un archivo que cree binario (cualquiera con un NUL, todo UTF-16), sólo
+// «Binary files differ»: una llave así que el push agrega y quita pasaba el rango.
+test("el rango ve una llave en UTF-16 o dentro de un binario que el push agrega y quita", (t) => {
+  const repo = tempRepo(t);
+  repo.write("README.md", "base\n");
+  const base = repo.commit("base");
+  repo.write("windows/servidor.env", utf16le(`A=1\r\nKEY=sb_secret_${"w".repeat(31)}\r\n`));
+  repo.write("datos/imagen.bin", Buffer.concat([Buffer.from([0x89, 0x50, 0x00, 0x01, 0x0a]), Buffer.from(`${personalToken()}\n`)]));
+  const adds = repo.commit("agrega");
+  repo.git("rm", "-q", "windows/servidor.env", "datos/imagen.bin");
+  const head = repo.commit("quita");
+  assert.deepEqual(scanTrackedFiles(repo.dir), [], "el árbol final está limpio");
+  assert.deepEqual(scanCommitRange(`${base}..${head}`, repo.dir), [
+    `${adds.slice(0, 12)} datos/imagen.bin:2: sbp_ (token personal de la cuenta)`,
+    `${adds.slice(0, 12)} windows/servidor.env:2: sb_secret`,
+  ]);
+});
+
+// Revisión sec2 (SF-2): si un archivo versionado no se puede leer, la guarda no sabe si trae una llave: antes lo saltaba y salía con 0.
+// Sólo se salta un archivo borrado en el árbol de trabajo (ENOENT): ahí este checkout no tiene nada que publicar.
+test("un archivo versionado que no se puede leer detiene la guarda; uno borrado del árbol de trabajo se salta", (t) => {
+  const repo = tempRepo(t);
+  repo.write("a.txt", "a\n");
+  repo.write("borrado.txt", "b\n");
+  repo.write("ilegible.txt", "c\n");
+  repo.commit("tres");
+  rmSync(join(repo.dir, "borrado.txt"));
+  assert.deepEqual(scanTrackedFiles(repo.dir), [], "ENOENT: borrado del árbol de trabajo, se salta");
+  // Un directorio donde git espera un archivo da EISDIR con cualquier usuario (un chmod 000 no detiene a root).
+  rmSync(join(repo.dir, "ilegible.txt"));
+  mkdirSync(join(repo.dir, "ilegible.txt"));
+  assert.throws(() => scanTrackedFiles(repo.dir), (error) => error?.code === "EISDIR");
+  const cli = spawnSync(process.execPath, [new URL("./check-no-supabase-keys.mjs", import.meta.url).pathname], { cwd: repo.dir, encoding: "utf8" });
+  assert.equal(cli.status, 2, "la CLI sale con 2, nunca con 0");
 });
 
 test("una llave que un push agrega y quita en otro commit no está en el árbol, pero el rango la bloquea", (t) => {
