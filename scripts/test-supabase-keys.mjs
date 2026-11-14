@@ -307,6 +307,51 @@ test("SF-R5: un error de lectura no repite la llave que trae el nombre del archi
   assert.ok(!`${cli.stdout}${cli.stderr}`.includes(secret.slice(4)), "el error sale con la llave tapada");
 });
 
+// ── Revisión delta 2b (ND6): el autor y el committer de cada commit ─────────────────────────────────────────────────────────────
+// Un commit también publica el nombre y el correo de su autor y de su committer. Una llave pegada en `user.name`, en `user.email` o
+// en GIT_AUTHOR_NAME de un CI se publica con cada commit en este repo público, y antes el guardia sólo leía el mensaje. El informe
+// nombra el campo, nunca su valor: ni la llave ni la identidad, que es un dato personal.
+test("ND6: una llave en el nombre o el correo del autor o del committer detiene el rango, y el informe no repite la llave ni la identidad", (t) => {
+  const repo = tempRepo(t);
+  repo.write("a.txt", "a\n");
+  const base = repo.commit("base");
+  const secret = `sb_secret_${"i".repeat(31)}`;
+  const publishable = `sb_publishable_${"d".repeat(31)}`;
+  const jwt = legacyJwt("service_role");
+  const token = personalToken();
+  // Un commit vacío con la identidad del repo de prueba, salvo lo que se cambia.
+  const commitAs = (identity) => {
+    execFileSync("git", ["commit", "-q", "--allow-empty", "-m", "sin llave en el mensaje"], {
+      cwd: repo.dir, encoding: "utf8", env: {
+        ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1", GIT_AUTHOR_NAME: "prueba",
+        GIT_AUTHOR_EMAIL: "prueba@example.invalid", GIT_COMMITTER_NAME: "prueba", GIT_COMMITTER_EMAIL: "prueba@example.invalid", ...identity,
+      },
+    });
+    return repo.git("rev-parse", "HEAD");
+  };
+  const authorName = commitAs({ GIT_AUTHOR_NAME: `ci ${secret}` });
+  const authorEmail = commitAs({ GIT_AUTHOR_EMAIL: `${token}@example.invalid` });
+  const committerName = commitAs({ GIT_COMMITTER_NAME: jwt });
+  const committerEmail = commitAs({ GIT_COMMITTER_EMAIL: `${publishable}@example.invalid` });
+  // .mailmap no cambia lo que se publica: el autor de `authorName` sigue siendo el del commit aunque su correo se mapee a otro nombre.
+  repo.write(".mailmap", "Limpio <limpio@example.invalid> <prueba@example.invalid>\n");
+  const head = repo.commit("mailmap");
+  assert.deepEqual(scanTrackedFiles(repo.dir), [], "el árbol está limpio: la llave sólo está en las identidades");
+  const report = scanCommitRange(`${base}..${head}`, repo.dir);
+  assert.deepEqual([...report].sort(), [
+    `${authorName.slice(0, 12)} (nombre del autor): sb_secret`,
+    `${authorEmail.slice(0, 12)} (correo del autor): sbp_ (token personal de la cuenta)`,
+    `${committerName.slice(0, 12)} (nombre del committer): service_role heredada (JWT)`,
+    `${committerEmail.slice(0, 12)} (correo del committer): sb_publishable`,
+  ].sort(), "los cuatro campos, cada uno en su commit");
+  assert.deepEqual(scanCommitRange(`${committerEmail}..${head}`, repo.dir), [], "sólo los commits del rango; una identidad sin llave no cuenta");
+  const cli = spawnSync(process.execPath, [guardCli, "--rango", `${base}..${head}`], { cwd: repo.dir, encoding: "utf8" });
+  assert.equal(cli.status, 1);
+  const shown = `${cli.stdout}${cli.stderr}${report.join("\n")}`;
+  for (const value of [secret, publishable, jwt, token]) assert.ok(!shown.includes(value.slice(4)), "el informe nunca lleva la llave");
+  assert.ok(!shown.includes("example.invalid") && !shown.includes("prueba"), "ni la identidad: ni un nombre ni un correo");
+});
+
 test("el workflow del guardia revisa el árbol y cada commit del push o del pull request, con el historial completo", () => {
   const workflow = readFileSync(new URL("../.github/workflows/llaves-supabase.yml", import.meta.url), "utf8");
   assert.match(workflow, /^on:\n  push:\n  pull_request:\n/m);
