@@ -27,9 +27,14 @@
  * un archivo versionado es un enlace, la guarda se detiene en vez de seguirlo. Una ruta con una llave sale con la llave tapada
  * («llave»), también en los mensajes de error.
  *
+ * Revisión delta 2b (2026-11-14, ND6): un commit también publica el nombre y el correo de su autor y de su committer, y una llave
+ * pegada en `user.name` o en `user.email` (o en GIT_AUTHOR_NAME y sus pares en CI) se publica con cada commit. El rango los lee en la
+ * misma pasada que el mensaje (`%an %ae %cn %ce`, sin .mailmap: lo que guarda el commit) y el informe sólo nombra el campo, nunca su
+ * valor (tampoco un nombre o un correo, que son datos personales).
+ *
  * Lo que no ve (revisión sec2b, N8; una expresión regular no lo arregla): una llave partida en dos líneas, con `\` de shell o
- * concatenada en JS; una dentro de un gzip, en base64, con escapes `\u` de JSON o con un carácter de ancho cero; el mensaje de una
- * etiqueta anotada. Falla cerrada (sale con 2, falso rojo) con un force-push, porque el commit de antes ya no está en ningún ref, y
+ * concatenada en JS; una dentro de un gzip, en base64, con escapes `\u` de JSON o con un carácter de ancho cero; el mensaje y el autor
+ * de una etiqueta anotada. Falla cerrada (sale con 2, falso rojo) con un force-push, porque el commit de antes ya no está en ningún ref, y
  * con un submódulo en el árbol (EISDIR).
  *
  * Es el mismo archivo en la Suite, Welcome y CBF: se copia igual (sha256) a los tres.
@@ -37,7 +42,8 @@
  * Uso: node scripts/check-no-supabase-keys.mjs                         (revisa `git ls-files` del directorio actual: contenido,
  *                                                                        nombre y ruta de cada archivo, destino de cada enlace)
  *      node scripts/check-no-supabase-keys.mjs --rango base..cabeza    (revisa lo que agrega cada commit de base..cabeza: líneas,
- *                                                                        nombres de archivo y el mensaje del commit)
+ *                                                                        nombres de archivo, el mensaje del commit y el nombre y el
+ *                                                                        correo de su autor y de su committer)
  */
 import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync, readlinkSync } from "node:fs";
@@ -51,9 +57,12 @@ const GIT_BUFFER = 1024 * 1024 * 1024;
 const GIT_LOG = ["-c", "core.quotePath=false", "log", "--patch", "--text", "--unified=0", "--inter-hunk-context=0",
   "--diff-merges=first-parent", "--no-renames", "--no-color", "--no-ext-diff", "--no-textconv", "--no-show-signature", "--src-prefix=a/",
   "--dst-prefix=b/", "--format=commit %H"];
-// El mensaje entero (asunto y cuerpo) de cada commit, en UTF-8, como «hash\nmensaje» terminado en NUL (`git commit` no acepta un NUL
-// en el mensaje).
-const GIT_MESSAGES = ["log", "-z", "--format=%H%n%B", "--encoding=UTF-8", "--no-color", "--no-show-signature"];
+// De cada commit, en UTF-8 y terminado en NUL (`git commit` no acepta un NUL en el mensaje): el hash, el nombre y el correo del autor y
+// del committer (una línea cada uno: git no guarda un salto de línea en una identidad; `%an` y no `%aN`: los del commit, no los que da
+// .mailmap) y el mensaje entero, asunto y cuerpo.
+const GIT_MESSAGES = ["log", "-z", "--format=%H%n%an%n%ae%n%cn%n%ce%n%B", "--encoding=UTF-8", "--no-color", "--no-show-signature"];
+// Las cuatro líneas de identidad, en el orden de GIT_MESSAGES, con el nombre con que salen en el informe.
+const IDENTITY_FIELDS = ["nombre del autor", "correo del autor", "nombre del committer", "correo del committer"];
 
 /** El tipo de una JWT si es una llave de Supabase («service_role heredada», «anon heredada»…); `null` si no lo es. */
 function supabaseJwtKind(token) {
@@ -192,8 +201,9 @@ function pathInDiffHeader(header) {
 /**
  * Los hallazgos de lo que agrega cada commit de `base..cabeza`: las líneas que agrega (una fusión, contra su primer padre), como
  * `commit archivo:línea: tipo` con la línea del archivo en ese commit; el nombre y la ruta de cada archivo que queda en el commit
- * (agregado, cambiado o vacío; no uno borrado), como `commit archivo: tipo en el nombre`; y el mensaje de cada commit del rango, como
- * `commit (mensaje del commit):línea: tipo`.
+ * (agregado, cambiado o vacío; no uno borrado), como `commit archivo: tipo en el nombre`; el mensaje de cada commit del rango, como
+ * `commit (mensaje del commit):línea: tipo`; y el nombre y el correo de su autor y de su committer, como `commit (nombre del autor): tipo`
+ * (nunca el valor).
  */
 export function scanCommitRange(range, cwd = process.cwd()) {
   const [base, head] = resolveRange(range, cwd);
@@ -260,13 +270,16 @@ export function scanCommitRange(range, cwd = process.cwd()) {
     }
   }
   closeFile();
-  // Todo commit del rango se publica con su mensaje: también una fusión y los commits que trae.
+  // Todo commit del rango se publica con su mensaje y con su autor y su committer: también una fusión y los commits que trae.
   const messages = execFileSync("git", [...GIT_MESSAGES, `${base}..${head}`, "--"], { cwd, maxBuffer: GIT_BUFFER }).toString("latin1");
   for (const entry of messages.split("\0")) {
-    const newline = entry.indexOf("\n");
-    if (newline === -1) continue;
-    const hash = entry.slice(0, newline);
-    for (const found of findSupabaseKeys(entry.slice(newline + 1))) {
+    const lines = entry.split("\n");
+    if (lines.length <= IDENTITY_FIELDS.length + 1) continue;
+    const hash = lines[0];
+    IDENTITY_FIELDS.forEach((field, index) => {
+      for (const kind of keyKindsInLine(lines[index + 1])) report.push(`${hash.slice(0, 12)} (${field}): ${kind}`);
+    });
+    for (const found of findSupabaseKeys(lines.slice(IDENTITY_FIELDS.length + 1).join("\n"))) {
       report.push(`${hash.slice(0, 12)} (mensaje del commit):${found.line}: ${found.kind}`);
     }
   }
@@ -283,7 +296,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
       where = "los archivos versionados (contenido, nombres y enlaces)";
     } else if (args.length === 2 && args[0] === "--rango") {
       report = scanCommitRange(args[1]);
-      where = `lo que agrega ${args[1]} (líneas, nombres de archivo y mensajes de commit)`;
+      where = `lo que agrega ${args[1]} (líneas, nombres de archivo, mensajes, autores y committers de cada commit)`;
     } else {
       console.error("Uso: node scripts/check-no-supabase-keys.mjs [--rango base..cabeza]");
       process.exit(2);
