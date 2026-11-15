@@ -129,27 +129,70 @@
 .save { background: #5034fa; color: white; border-radius: 30px; width: fit-content; padding: 13px 24px; margin-top: 28px; }
 .messages { height: 100%; display: flex; }
 .conversations { width: 350px; border-right: 1px solid var(--suite-border); flex-shrink: 0; }
-.conversationHeader { height: 76px; border-bottom: 1px solid #f5f6f8; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; }
-.conversationHeader h3 { font-size: 19px; }
-.conversationHeader .round { width: 40px; height: 40px; background: #f1f5f9; }
-.contact { display: flex; align-items: center; position: relative; gap: 12px; margin: 8px 10px; padding: 13px; height: 64px; color: #63768f; }
-.contact > div { min-width: 0; }
-.contact b { color: #202c40; font-size: 15px; letter-spacing: -.4px; }
-.contact small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 246px; }
-.contact time { position: absolute; right: 12px; top: 10px; font-size: 11px; color: #8da3c0; }
-.contactAvatar { background: #ffe4e8; color: #e8004b; width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; font-size: 13px; font-weight: 600; }
-.contactActive { background: #f3f4ff; border-radius: 19px; }
-.contactActive .contactAvatar { background: #dbe7f1; color: #425f81; }
-.chat { position: relative; flex: 1; background: #fdfefe; }
-.chatHeader { display: flex; align-items: center; gap: 14px; height: 76px; padding: 0 26px; border-bottom: 1px solid #f5f6f8; background: #fff; }
-.chatHeader small { display: block; }
-.sent, .received { border-radius: 26px; padding: 14px 18px; width: fit-content; font-size: 16px; }
-.sent { margin: 18px 26px 0 auto; background: #5034fb; color: #fff; border-bottom-right-radius: 5px; }
-.sent small, .received small { display: block; font-size: 10px; margin-top: 6px; }
-.sent small { color: #b2a4ff; }
-.received { border: 1px solid #f1f4f7; background: #fff; margin: 13px 26px; border-bottom-left-radius: 5px; color: #475569; }
-.composer { position: absolute; left: 26px; right: 26px; bottom: 26px; border: 1px solid var(--suite-border); border-radius: 28px; display: flex; align-items: center; gap: 20px; height: 64px; padding: 0 24px; color: #9bafca; }
-.composer > span:last-child { margin-left: auto; background: #a693ff; border-radius: 50%; padding: 9px; color: #fff; }
+.conversationHeader { height: 70px; padding: 14px 18px; display: flex; align-items: center; gap: 18px; }
+.conversationHeader h3 { font-size: 19px; font-weight: 600; color: #1e293b; }
+.conversationHeader .round { width: 40px; height: 40px; margin-left: auto; background: #f8fafc; color: #64748b; }
+.tabPill { background: #f1f5f9; border-radius: 20px; padding: 7px 14px; font-size: 15px; font-weight: 500; color: #334155; }
+.conversationSearch { margin: 4px 14px 12px; height: 40px; border: 1px solid var(--suite-border); border-radius: 12px; padding: 0 14px; display: flex; align-items: center; color: #9aaec8; font-size: 15px; }
+.channelFilters { display: flex; gap: 8px; padding: 0 14px 14px; border-bottom: 1px solid var(--suite-border); }
+.channelFilters span { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--suite-border); display: grid; place-items: center; color: #334155; }
+.channelFilters svg { width: 17px; height: 17px; }
+.channelFilters .channelActive { background: #eef2ff; border-color: #c7d2fe; color: #3c5bff; }
+.contact { margin: 8px 10px; padding: 10px 13px; border-radius: 14px; border: 1px solid transparent; color: #64748b; }
+.contact b { display: block; color: #1e293b; font-size: 15px; font-weight: 500; }
+.contact small { display: block; font-size: 12px; color: #7b8aa0; }
+.contact p { font-size: 13px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.contactActive { background: #eef2ff; border-color: #c7d2fe; }
+.contactAvatar { background: #dff3f9; color: #2563eb; width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; font-size: 13px; font-weight: 600; }
+.chat { position: relative; flex: 1; min-width: 0; background: #fff; display: flex; flex-direction: column; }
+.chatHeader { display: flex; align-items: center; gap: 14px; height: 70px; padding: 0 18px; border-bottom: 1px solid var(--suite-border); }
+.chatTitle b { display: block; font-size: 15px; color: #1e293b; }
+.chatTitle small { display: block; font-size: 12px; color: #7b8aa0; }
+.chatTools { margin-left: auto; display: flex; align-items: center; gap: 10px; color: #334155; }
+.chatTools .round { width: 38px; height: 38px; background: #fff; color: #334155; }
+.chatTools svg { width: 18px; height: 18px; }
+.select { display: flex; align-items: center; justify-content: space-between; gap: 30px; height: 40px; padding: 0 14px; border: 1px solid var(--suite-border); border-radius: 12px; font-size: 15px; color: #1e293b; min-width: 150px; }
+.selectMuted { color: #9aaec8; min-width: 150px; }
+.thread { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding: 18px 26px 0; }
+.sent, .received { border-radius: 14px; padding: 11px 16px 8px; max-width: 72%; width: fit-content; font-size: 15px; line-height: 1.45; }
+.sent { margin-left: auto; background: #1e293b; color: #fff; }
+.received { background: #f1f5f9; color: #1e293b; }
+.sent time, .received time { display: block; text-align: right; font-size: 10px; margin-top: 4px; }
+.sent time { color: #94a3b8; }
+.received time { color: #94a3b8; text-align: left; }
+.sent .bubbleContext { display: block; font-size: 11px; color: #cbd5e1; letter-spacing: .3px; margin-bottom: 3px; }
+.offerCard { margin-left: auto; width: 350px; border: 1px solid var(--suite-border); border-radius: 14px; padding: 16px 18px; background: #fff; }
+.offerKind { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #475569; margin-bottom: 10px; }
+.offerKind svg { width: 15px; height: 15px; }
+.offerCard > small { display: block; font-size: 12px; color: #64748b; }
+.offerAmount { font-size: 27px; font-weight: 700; color: #0f172a; margin: 6px 0 4px; }
+.offerAmount small { font-size: 12px; font-weight: 500; color: #475569; margin-left: 8px; }
+.offerCard > p { font-size: 15px; color: #334155; }
+.offerCard .offerPayment { display: block; margin-top: 8px; font-size: 12px; color: #64748b; }
+.offerFooter { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.offerFooter time { font-size: 10px; color: #94a3b8; }
+.outlinePill { display: inline-flex; align-items: center; gap: 7px; width: fit-content; border: 1px solid var(--suite-border); border-radius: 20px; padding: 6px 14px; background: #fff; color: #1e293b; font-size: 15px; font-weight: 600; }
+.outlinePill svg { width: 15px; height: 15px; }
+.composer { margin: 14px 26px 84px; border: 1px solid var(--suite-border); border-radius: 22px; padding: 12px 18px; color: #9bafca; }
+.composer > small { display: block; font-size: 12px; color: #64748b; margin-bottom: 8px; }
+.composer > div { display: flex; align-items: center; gap: 18px; font-size: 15px; }
+.sendButton { margin-left: auto; background: #a693ff; border-radius: 50%; padding: 9px; color: #fff; }
+.sendButton svg { width: 18px; height: 18px; }
+.copilotPill { position: absolute; z-index: 5; bottom: 20px; left: calc(350px + (100% - 350px) / 2); transform: translateX(-50%); border: 1px solid var(--suite-border); border-radius: 20px; padding: 8px 16px; background: #fff; color: #1e293b; font-size: 15px; font-weight: 600; box-shadow: 0 2px 6px #0000000d; }
+.linkedRail { padding: 20px 18px 20px 26px; color: #1e293b; }
+.offerAction { background: #fff; border-radius: 18px; padding: 20px 22px; margin-bottom: 36px; }
+.backLink { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin-bottom: 18px; }
+.backLink svg { width: 17px; height: 17px; }
+.linkedPhoto { height: 180px; border-radius: 16px; overflow: hidden; margin-bottom: 18px; }
+.canvas .linkedTitle { font-size: 19px; font-weight: 700; line-height: 1.35; color: #0f172a; }
+.linkedPlace { color: #64748b; font-size: 14px; margin-top: 10px !important; }
+.canvas .linkedNote { display: block; font-size: 12px; color: #64748b; margin-top: 6px; }
+.linkedPrice { display: block; font-size: 16px; margin: 8px 0 10px; }
+.prospectButton { display: flex; margin-top: 14px; }
+.prospectsLabel { margin: 22px 0 14px; font-size: 15px; font-weight: 500; }
+.prospectRow { display: flex; align-items: center; gap: 12px; font-size: 15px; }
+.prospectRow > svg:first-child { color: #fff; fill: #4f46e5; width: 20px; height: 20px; }
+.prospectRow > svg:last-child { margin-left: auto; color: #64748b; }
 .intelligence { padding: 42px 26px; background: #fcfdfe; min-height: 100%; }
 .intelligence > h3 { font-size: 44px; font-weight: 500; letter-spacing: -2px; color: #151e30; }
 .intelligence > h3 > span { color: #1946ef; }
