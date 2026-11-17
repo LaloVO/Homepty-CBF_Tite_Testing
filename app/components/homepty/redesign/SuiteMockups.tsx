@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
-import { ArrowRight, ArrowUpRight, BarChart3, Bath, BedDouble, Bell, BrainCircuit, Briefcase, Building, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, CirclePlus, ClipboardList, Filter, Globe, Heart, LayoutGrid, MapPin, MessageCircle, MoreHorizontal, PanelLeft, Paperclip, Plus, Search, Send, Sparkles, SquareArrowOutUpRight, TrendingUp, Trash2, User, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, Bath, BedDouble, Bell, BrainCircuit, Briefcase, Building, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, CircleCheck, CirclePlus, ClipboardList, FileText, Filter, Globe, Hand, Heart, Layers, LayoutGrid, Mail, MapPin, MessageCircle, MessagesSquare, MoreHorizontal, PanelLeft, PanelRight, Paperclip, Play, Plus, Search, Send, Sparkles, SquareArrowOutUpRight, TrendingUp, Trash2, User, UserCheck, Users, X } from "lucide-react";
 import s from "./SuiteMockups.module.css";
 
 // Presentation-only snapshots of homepty_new. No auth, providers or business logic.
@@ -28,8 +28,8 @@ function Copilot() {
   return <div className={s.copilot}><Sparkles /><span>Pregúntale al Copilot...</span><small>ABRIR</small></div>;
 }
 
-function Shell({ active, expanded = false, rail, children }: { active: string; expanded?: boolean; rail?: ReactNode; children: ReactNode }) {
-  return <div className={s.shell}><Sidebar active={active} expanded={expanded} /><div className={s.workspace}>{children}<Copilot /></div>{rail}</div>;
+function Shell({ active, expanded = false, rail, copilot = <Copilot />, children }: { active: string; expanded?: boolean; rail?: ReactNode; copilot?: ReactNode; children: ReactNode }) {
+  return <div className={s.shell}><Sidebar active={active} expanded={expanded} /><div className={s.workspace}>{children}{copilot}</div>{rail}</div>;
 }
 
 function Header({ title, tools }: { title: string; tools?: ReactNode }) {
@@ -76,8 +76,34 @@ function Explore() {
   return <Shell active="Explorar" rail={<aside className={`${s.rail} ${s.results}`}><h4>Resultados <Filter /></h4><div className={s.railLabel}>PROPIEDADES DETECTADAS (366)</div>{[0, 4, 0, 5, 2, 3, 6, 7].map((index, i) => <div className={s.result} key={i}><PropertyPhoto index={index} /><div><b>{properties[index].title}</b><small>{properties[index].beds} Hab · {properties[index].baths} Baños · {properties[index].area} m²</small><strong>{properties[index].price}</strong></div></div>)}</aside>}><div className={s.map}><div className={s.mapSearch}><PanelLeft /><span className={s.search}><Search />Buscar zona, calle o ID...</span><div><span className={s.pill}>Operación <ChevronDown /></span><span className={s.pill}><Filter />Filtros</span></div><span className={s.blueButton}><Search />Buscar</span><Bell /></div><div className={s.mapPanels}><div className={s.mapCard}><h4>Puntos de interés <X /></h4><p>Radio: 1 km</p><div className={s.slider}><i /></div><div className={s.poiChips}>{["Todas", "Supermercados", "Farmacias", "Plazas comerciales", "Mercados y abasto", "Hospitales y clínicas", "Escuelas"].map((x, i) => <span key={x} className={i === 1 || i === 4 ? s.chipSelected : ""}>{x}</span>)}</div><p>35 lugares encontrados</p><small>Google muestra una selección de hasta 20 lugares por categoría. La búsqueda no garantiza un censo exhaustivo.</small><small>INEGI · DENUE · © OpenStreetMap contributors · ODbL · Google Maps</small></div><div className={s.mapCard}><h4>Movilidad</h4><p>Selecciona un punto de interés para consultar el traslado.</p></div><div className={s.mapCard}><h4><TrendingUp /> Análisis de inversión</h4><p>Calcula rendimiento, flujo y valor presente a partir del escenario financiero que declares.</p><span className={s.blueButton}>Analizar inversión</span></div><div className={s.mapCard}><h4>Precio de zona</h4><small className={s.warning}>Evidencia local limitada</small><div className={s.zonePrice}>$14,116 <small>/m²</small></div><div className={s.zoneScale} /><p>Precio publicado <b>$19,313</b></p><p>Valor por área (m2) <b>$3.29M</b></p><small>Base local 2023-12-31 · estimación local ajustada por evidencia disponible. No equivale a un avalúo certificado.</small></div></div><div className={s.mapProperty}><X /><div className={s.selectedHouse} /><h4>CASA FRACC. EMILIO CARRANZA</h4><small>CASA</small><strong>$4,500,000</strong><p>□ 206 m²　♙ 4 hab</p><div className={s.outlineButton}>Ver entorno</div><div className={s.blueButton}>Ver propiedad <ArrowRight /></div></div></div></Shell>;
 }
 
+// Fictional conversations: no real contacts, agencies or offers.
+const chatProperty = { title: "CASA EN VENTA EN LOS PINOS, SALTILLO", place: "Los Pinos, Saltillo, Coahuila de Zaragoza", price: "$2,350,000", photo: 1 };
+const chats = [
+  { name: "Grupo Arboleda Inmobiliaria", channel: "Homepty · Mensaje directo", preview: "Lo reviso con los dueños y te confirmo hoy." },
+  { name: "Mariana Treviño", channel: "WhatsApp · Prospecto", preview: "¿Sigue disponible la casa en Los Pinos?" },
+  { name: "Carlos Villarreal", channel: "Sitio web · Formulario", preview: "Me interesa agendar una visita el sábado." },
+  { name: "Daniela Ortiz", channel: "Homepty · Mensaje directo", preview: "Te comparto el avalúo actualizado del terreno." },
+  { name: "Jorge Ramos", channel: "Correo · Prospecto", preview: "Adjunto la precalificación del banco." },
+  { name: "Lucía Garza", channel: "WhatsApp · Prospecto", preview: "Gracias, quedo pendiente de la ficha." },
+];
+type ChatMessage = { from: "me" | "them"; text: string; time: string } | { offer: true; amount: string; terms: string; payment: string; time: string };
+const thread: ChatMessage[] = [
+  { from: "them", text: "Hola, vi que tienes un prospecto para la casa en Los Pinos. ¿Sigue buscando en la zona?", time: "10:07 a.m." },
+  { from: "me", text: "Sí, busca 3 recámaras y ya tiene crédito aprobado. Te comparto su perfil por aquí.", time: "10:12 a.m." },
+  { from: "them", text: "Perfecto. Los dueños aceptan visitas entre semana por la tarde.", time: "10:20 a.m." },
+  { offer: true, amount: "$2,250,000", terms: "Entrega en 60 días", payment: "Requiere financiamiento", time: "11:02 a.m." },
+  { from: "me", text: "Mi cliente puede visitarla el jueves a las 5. Si la oferta les hace sentido, la cerramos desde aquí.", time: "11:03 a.m." },
+  { from: "them", text: "Lo reviso con los dueños y te confirmo hoy.", time: "11:15 a.m." },
+];
+const chatProspect = "Andrea Salinas (DEMO)";
+
+function LinkedPropertyRail() {
+  return <aside className={`${s.rail} ${s.linkedRail}`}><div className={s.offerAction}><span className={s.outlinePill}>Hacer una oferta</span></div><div className={s.backLink}><ArrowLeft />Propiedades</div><div className={s.linkedPhoto}><PropertyPhoto index={chatProperty.photo} /></div><h4 className={s.linkedTitle}>{chatProperty.title}</h4><p className={s.linkedPlace}>{chatProperty.place}</p><small className={s.linkedNote}>Consulta vinculada a esta propiedad · Suite</small><strong className={s.linkedPrice}>{chatProperty.price}</strong><span className={s.outlinePill}>Ver propiedad</span><span className={`${s.outlinePill} ${s.prospectButton}`}><Users />Presentar prospecto</span><div className={s.prospectsLabel}>Prospectos incluidos en este mensaje</div><div className={s.prospectRow}><CircleCheck />{chatProspect}<MoreHorizontal /></div></aside>;
+}
+
 function Messages() {
-  return <Shell active="Mensajes"><div className={s.messages}><div className={s.conversations}><div className={s.conversationHeader}><h3>Mensajes</h3><span className={s.round}><Plus /></span></div><div className={s.contact}><span className={s.contactAvatar}><Users /></span><div>Homeptiers<small>Aquí queremos conectar sus canales...</small></div><time>06-ago</time></div><div className={`${s.contact} ${s.contactActive}`}><span className={s.contactAvatar}>LG</span><div><b>Leonardo González Tejeda</b><small>Hey</small></div><time>21-jul</time></div></div><div className={s.chat}><div className={s.chatHeader}><span className={s.contactAvatar}>LG</span><div><b>Leonardo González Tejeda</b><small>Mensaje directo</small></div></div><div className={s.sent}>Leo<small>06:18 a.m.</small></div><div className={s.received}>Hey<small>08:09 p.m.</small></div><div className={s.composer}><Paperclip /><span>Escribe un mensaje... (Enter para enviar)</span><span><Send /></span></div></div></div></Shell>;
+  const [active] = chats;
+  return <Shell active="Mensajes" expanded rail={<LinkedPropertyRail />} copilot={<div className={s.copilotPill}>AI Copilot</div>}><div className={s.messages}><div className={s.conversations}><div className={s.conversationHeader}><h3>Mensajes</h3><span className={s.tabPill}>Conexiones</span><span className={s.round}><Plus /></span></div><div className={s.conversationSearch}>Buscar conversación</div><div className={s.channelFilters}>{[Layers, MessagesSquare, User, Mail, UserCheck].map((Icon, i) => <span key={i} className={i === 0 ? s.channelActive : ""}><Icon /></span>)}</div>{chats.map((chat, i) => <div className={`${s.contact} ${i === 0 ? s.contactActive : ""}`} key={chat.name}><b>{chat.name}</b><small>{chat.channel}</small><p>{chat.preview}</p></div>)}</div><div className={s.chat}><div className={s.chatHeader}><span className={s.contactAvatar}>GA</span><div className={s.chatTitle}><b>{active.name}</b><small>Mensaje directo</small></div><div className={s.chatTools}><span className={s.select}>Manual<ChevronDown /></span><span className={s.round}><Hand /></span><span className={s.round}><Play /></span><Sparkles /><span className={`${s.select} ${s.selectMuted}`}>Todo el hist...<ChevronDown /></span><PanelRight /></div></div><div className={s.thread}>{thread.map((m, i) => "offer" in m ? <div className={s.offerCard} key={i}><div className={s.offerKind}><FileText />Oferta económica</div><small>{chatProperty.title}</small><div className={s.offerAmount}>{m.amount}<small>MXN</small></div><p>{m.terms}</p><small className={s.offerPayment}>{m.payment}</small><div className={s.offerFooter}><span className={s.outlinePill}>Ver detalles<ArrowUpRight /></span><time>{m.time}</time></div></div> : <div className={m.from === "me" ? s.sent : s.received} key={i}>{m.from === "me" && <small className={s.bubbleContext}>{chatProperty.title}</small>}{m.text}<time>{m.time}</time></div>)}</div><div className={s.composer}><small>{chatProperty.title} · {chatProspect}</small><div><Paperclip /><span>Escribe un mensaje... (Enter para enviar)</span><span className={s.sendButton}><Send /></span></div></div></div></div></Shell>;
 }
 
 const graphNodes = Array.from({ length: 33 }, (_, i) => {

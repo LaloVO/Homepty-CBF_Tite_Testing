@@ -1,4 +1,5 @@
 import SuiteStory from "./SuiteStory";
+import PromoOffer from "./PromoOffer";
 
 export default function HeroSection() {
   return (
@@ -9,6 +10,7 @@ export default function HeroSection() {
           <span>{"producto."}</span>
         </h1>
         <div className="hero-side hero-anim">
+          <PromoOffer />
           <p>
             {
               "Tu marca al frente. Debajo, una appweb conectada a inventario, mapa, datos, seguimiento, IA y capas de cumplimiento. No una plantilla más."
